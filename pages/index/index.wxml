@@ -1,0 +1,12 @@
+<view class="container {{animationClass}}" bindtap="onEnter">
+  <view class="logo-section">
+    <image class="logo" src="/static/compressed.png" mode="aspectFit"></image>
+    <text class="title">随便记</text>
+    <text class="subtitle">水火橙の记忆宫殿</text>
+  </view>
+  <view class="loading">
+    <view class="dot"></view>
+    <view class="dot"></view>
+    <view class="dot"></view>
+  </view>
+</view>

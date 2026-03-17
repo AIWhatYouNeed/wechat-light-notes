@@ -1,0 +1,20 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/home/home",
+    "pages/addNote/addNote",
+    "pages/mine/mine",
+    "pages/share/share",
+    "pages/groups/groups",
+    "pages/groupDetail/groupDetail"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "navigationBarTitleText": "随便记",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F8F8F8"
+  },
+  "cloud": true,
+  "sitemapLocation": "sitemap.json"
+}

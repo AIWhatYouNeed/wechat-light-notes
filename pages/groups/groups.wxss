@@ -1,0 +1,282 @@
+.container {
+  min-height: 100vh;
+  background: #F8F8F8;
+  padding: 30rpx;
+}
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 30rpx;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 30rpx;
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+}
+
+.action-btn.create {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.action-btn.join {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.action-btn .icon {
+  font-size: 48rpx;
+  color: #fff;
+  margin-bottom: 10rpx;
+}
+
+.action-btn text:last-child {
+  font-size: 28rpx;
+  color: #fff;
+}
+
+/* Section */
+.section {
+  margin-top: 20rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-left: 20rpx;
+  border-left: 8rpx solid #667eea;
+}
+
+/* Group List */
+.group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.group-item {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.group-main {
+  display: flex;
+  align-items: center;
+  padding: 30rpx;
+  flex: 1;
+}
+
+.group-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.group-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.group-code-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 30rpx;
+  background: #f8f9ff;
+  border-top: 1rpx solid #e8ecff;
+}
+
+.group-code {
+  font-size: 26rpx;
+  color: #667eea;
+  font-weight: 500;
+}
+
+.copy-hint {
+  font-size: 22rpx;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+.group-members {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.arrow {
+  font-size: 32rpx;
+  color: #999;
+}
+
+.group-actions {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.delete-group-btn {
+  font-size: 24rpx;
+  color: #f44336;
+  background: #ffebee;
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  justify-content: center;
+  padding: 80rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+/* History Toggle */
+.history-toggle {
+  margin-top: 40rpx;
+  padding: 30rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 30rpx;
+  color: #667eea;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+
+.history-toggle .arrow {
+  font-size: 24rpx;
+}
+
+.history-section {
+  margin-top: 20rpx;
+}
+
+.history-section .section-title {
+  border-left-color: #999;
+  color: #666;
+}
+
+.history-item {
+  opacity: 0.8;
+}
+
+.rejoin-btn {
+  padding: 12rpx 24rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 30rpx;
+}
+
+.rejoin-btn text {
+  color: #fff;
+  font-size: 26rpx;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.3s;
+}
+
+.modal.show {
+  visibility: visible;
+  opacity: 1;
+}
+
+.modal-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  width: 80%;
+  background: #fff;
+  border-radius: 20rpx;
+  transition: all 0.3s;
+}
+
+.modal.show .modal-content {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.modal-header {
+  padding: 40rpx;
+  text-align: center;
+  font-size: 36rpx;
+  font-weight: bold;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.modal-body {
+  padding: 40rpx;
+}
+
+.modal-body input {
+  width: 100%;
+  height: 80rpx;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  font-size: 32rpx;
+  box-sizing: border-box;
+}
+
+.modal-footer {
+  display: flex;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.modal-footer button {
+  flex: 1;
+  height: 100rpx;
+  line-height: 100rpx;
+  background: none;
+  border: none;
+  font-size: 32rpx;
+}
+
+.modal-footer button::after {
+  border: none;
+}
+
+.btn-cancel {
+  color: #666;
+  border-right: 1rpx solid #f0f0f0;
+}
+
+.btn-confirm {
+  color: #667eea;
+  font-weight: bold;
+}

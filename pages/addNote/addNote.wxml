@@ -1,0 +1,28 @@
+<view class="container">
+  <view class="form">
+    <input class="title-input" placeholder="标题（可选）" value="{{title}}" bindinput="onTitleInput" />
+    <textarea class="content-input" placeholder="记录你的想法..." value="{{content}}" bindinput="onContentInput" maxlength="2000" />
+    <text class="word-count">{{content.length}}/2000</text>
+  </view>
+
+  <view class="color-picker">
+    <text class="label">背景颜色</text>
+    <view class="colors">
+      <view class="color-item {{color === '#ffffff' ? 'active' : ''}}" style="background: #ffffff; border: 1rpx solid #ddd;" bindtap="selectColor" data-color="#ffffff"></view>
+      <view class="color-item {{color === '#FFF9C4' ? 'active' : ''}}" style="background: #FFF9C4;" bindtap="selectColor" data-color="#FFF9C4"></view>
+      <view class="color-item {{color === '#C8E6C9' ? 'active' : ''}}" style="background: #C8E6C9;" bindtap="selectColor" data-color="#C8E6C9"></view>
+      <view class="color-item {{color === '#BBDEFB' ? 'active' : ''}}" style="background: #BBDEFB;" bindtap="selectColor" data-color="#BBDEFB"></view>
+      <view class="color-item {{color === '#FFCCBC' ? 'active' : ''}}" style="background: #FFCCBC;" bindtap="selectColor" data-color="#FFCCBC"></view>
+      <view class="color-item {{color === '#E1BEE7' ? 'active' : ''}}" style="background: #E1BEE7;" bindtap="selectColor" data-color="#E1BEE7"></view>
+    </view>
+  </view>
+
+  <view class="preview" style="background: {{color}};">
+    <text class="preview-title">{{title || '预览标题'}}</text>
+    <text class="preview-content">{{content || '预览内容...'}}</text>
+  </view>
+</view>
+
+<view class="footer">
+  <button class="btn-save" bindtap="saveNote">保存</button>
+</view>

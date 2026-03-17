@@ -1,0 +1,93 @@
+<view class="container">
+  <!-- Header Actions -->
+  <view class="header-actions">
+    <view class="action-btn create" bindtap="showCreate">
+      <text class="icon">+</text>
+      <text>创建共享组</text>
+    </view>
+    <view class="action-btn join" bindtap="showJoin">
+      <text class="icon">#</text>
+      <text>加入共享组</text>
+    </view>
+  </view>
+
+  <!-- Group List -->
+  <view class="section">
+    <view class="section-title">我的共享组</view>
+    <block wx:if="{{groups.length > 0}}">
+      <view class="group-list">
+        <view class="group-item" wx:for="{{groups}}" wx:key="_id">
+          <view class="group-main" bindtap="goToGroupDetail" data-id="{{item._id}}">
+            <view class="group-info">
+              <text class="group-name">{{item.name}}</text>
+              <text class="group-members">{{item.members.length}} 人</text>
+            </view>
+            <view class="group-actions">
+              <text wx:if="{{item.creator === userOpenid}}" class="delete-group-btn" catchtap="deleteGroup" data-id="{{item._id}}">删除</text>
+              <text class="arrow">></text>
+            </view>
+          </view>
+          <view class="group-code-box" bindtap="copyCode" data-code="{{item.code}}">
+            <text class="group-code">分享码：{{item.code}}</text>
+            <text class="copy-hint">点击复制</text>
+          </view>
+        </view>
+      </view>
+    </block>
+    <view wx:else class="empty-state">
+      <text>还没有共享组，创建一个或加入一个吧</text>
+    </view>
+  </view>
+
+  <!-- History Toggle -->
+  <view class="history-toggle" bindtap="toggleHistory" wx:if="{{history.length > 0}}">
+    <text>{{showHistory ? '收起' : '展开'}}历史记录 ({{history.length}})</text>
+    <text class="arrow">{{showHistory ? '▲' : '▼'}}</text>
+  </view>
+
+  <!-- History List -->
+  <view class="section history-section" wx:if="{{showHistory && history.length > 0}}">
+    <view class="section-title">已退出的共享组</view>
+    <view class="group-list">
+      <view class="group-item history-item" wx:for="{{history}}" wx:key="_id">
+        <view class="group-info">
+          <text class="group-name">{{item.groupName}}</text>
+          <text class="group-code">分享码：{{item.groupCode}}</text>
+        </view>
+        <view class="rejoin-btn" bindtap="rejoinGroup" data-id="{{item.groupId}}">
+          <text>重新加入</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- Create Group Modal -->
+<view class="modal {{showCreateModal ? 'show' : ''}}">
+  <view class="modal-mask" bindtap="closeCreateModal"></view>
+  <view class="modal-content">
+    <view class="modal-header">创建共享组</view>
+    <view class="modal-body">
+      <input type="text" placeholder="请输入共享组名称" value="{{groupName}}" bindinput="onGroupNameInput" />
+    </view>
+    <view class="modal-footer">
+      <button class="btn-cancel" bindtap="closeCreateModal">取消</button>
+      <button class="btn-confirm" bindtap="createGroup">创建</button>
+    </view>
+  </view>
+</view>
+
+<!-- Join Group Modal -->
+<view class="modal {{showJoinModal ? 'show' : ''}}">
+  <view class="modal-mask" bindtap="closeJoinModal"></view>
+  <view class="modal-content">
+    <view class="modal-header">加入共享组</view>
+    <view class="modal-body">
+      <input type="text" placeholder="请输入6位分享码" value="{{joinCode}}" bindinput="onJoinCodeInput" maxlength="6" />
+    </view>
+    <view class="modal-footer">
+      <button class="btn-cancel" bindtap="closeJoinModal">取消</button>
+      <button class="btn-confirm" bindtap="joinGroup">加入</button>
+    </view>
+  </view>
+</view>

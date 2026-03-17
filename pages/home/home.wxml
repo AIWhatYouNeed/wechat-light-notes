@@ -1,0 +1,152 @@
+<view class="container">
+  <!-- Sticky Header -->
+  <view class="sticky-header">
+    <!-- Header -->
+    <view class="header">
+      <view class="user-info" bindtap="goToMine">
+        <image class="avatar" src="{{userInfo.avatarUrl || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+        <text class="nickname">{{userInfo.nickName || '用户'}}</text>
+      </view>
+      <view class="header-actions">
+        <view class="action-btn" bindtap="goToGroups">
+          <text class="icon">👥</text>
+          <text>共享组</text>
+        </view>
+        <view class="action-btn" bindtap="goToShare">
+          <text class="icon">📤</text>
+          <text>查看分享</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Quick Add -->
+    <view class="quick-add" bindtap="onAddNote">
+      <text class="icon">+</text>
+      <text>记录新的小记...</text>
+    </view>
+  </view>
+
+  <!-- Scrollable Content -->
+  <scroll-view class="content-scroll" scroll-y="true">
+    <!-- Notes List -->
+    <view class="section">
+      <!-- Notes Batch Bar -->
+      <view class="batch-bar" wx:if="{{notesBatchMode}}">
+        <text class="batch-info">已选择 {{selectedNotes.length}} 项</text>
+        <view class="batch-actions">
+          <text class="batch-btn" bindtap="selectAllNotes">全选</text>
+          <text class="batch-btn delete" bindtap="batchDeleteNotes">删除</text>
+          <text class="batch-btn cancel" bindtap="exitNotesBatchMode">取消</text>
+        </view>
+      </view>
+
+      <view class="section-title" bindtap="{{notesBatchMode ? '' : 'toggleNotes'}}">
+        <text>我的小记</text>
+        <view class="title-actions" wx:if="{{!notesBatchMode}}">
+          <text class="batch-trigger" catchtap="enterNotesBatchMode">批量</text>
+          <text class="toggle-icon">{{notesCollapsed ? '▶' : '▼'}}</text>
+        </view>
+      </view>
+      <block wx:if="{{!notesCollapsed && notes.length > 0}}">
+        <view class="note-list">
+          <view wx:for="{{notes}}" wx:key="_id" class="note-item {{notesBatchMode ? 'batch-item' : ''}} {{item.selected ? 'selected' : ''}}" bindtap="{{notesBatchMode ? 'toggleNoteSelect' : 'onEditNote'}}" data-id="{{item._id}}">
+            <view class="batch-checkbox" wx:if="{{notesBatchMode}}">
+              <view class="checkbox {{item.selected ? 'checked' : ''}}">
+                <text wx:if="{{item.selected}}">✓</text>
+              </view>
+            </view>
+            <view class="note-content">
+              <text class="note-title">{{item.title || '无标题'}}</text>
+              <text class="note-preview">{{item.content}}</text>
+              <text class="note-time">{{item.createTime}}</text>
+            </view>
+            <view class="note-actions" catchtap="stopPropagation" wx:if="{{!notesBatchMode}}">
+              <text class="share-tag {{item.shared ? 'shared' : ''}}" bindtap="toggleShare" data-item="{{item}}" data-index="{{index}}">{{item.shared ? '已分享' : '分享'}}</text>
+              <text class="delete-btn" bindtap="onDeleteNote" data-id="{{item._id}}">删除</text>
+            </view>
+          </view>
+        </view>
+      </block>
+      <view wx:if="{{!notesCollapsed && notes.length === 0}}" class="empty-state">
+        <image src="/static/icon/empty_fill.png" mode="aspectFit"></image>
+        <text>还没有小记，点击上方添加</text>
+      </view>
+    </view>
+
+    <!-- Todo List -->
+    <view class="section">
+      <!-- Todos Batch Bar -->
+      <view class="batch-bar" wx:if="{{todosBatchMode}}">
+        <text class="batch-info">已选择 {{selectedTodos.length}} 项</text>
+        <view class="batch-actions">
+          <text class="batch-btn" bindtap="selectAllTodos">全选</text>
+          <text class="batch-btn delete" bindtap="batchDeleteTodos">删除</text>
+          <text class="batch-btn cancel" bindtap="exitTodosBatchMode">取消</text>
+        </view>
+      </view>
+
+      <view class="section-title" bindtap="{{todosBatchMode ? '' : 'toggleTodos'}}">
+        <text>待办事项</text>
+        <view class="title-actions" wx:if="{{!todosBatchMode}}">
+          <text class="batch-trigger" catchtap="enterTodosBatchMode">批量</text>
+          <text class="toggle-icon">{{todosCollapsed ? '▶' : '▼'}}</text>
+        </view>
+      </view>
+      <block wx:if="{{!todosCollapsed && !todosBatchMode}}">
+        <view class="todo-input-box">
+          <input class="todo-input" placeholder="添加新的待办事项..." value="{{newTodo}}" bindinput="onTodoInput" confirm-type="done" bindconfirm="addTodo" />
+          <view class="todo-add-btn" bindtap="addTodo">+</view>
+        </view>
+      </block>
+      <block wx:if="{{!todosCollapsed && todos.length > 0}}">
+        <view class="todo-list">
+          <view wx:for="{{todos}}" wx:key="_id" class="todo-item {{item.completed ? 'completed' : ''}} {{todosBatchMode ? 'batch-item' : ''}} {{item.selected ? 'selected' : ''}}" bindtap="{{todosBatchMode ? 'toggleTodoSelect' : ''}}" data-id="{{item._id}}">
+            <view class="batch-checkbox" wx:if="{{todosBatchMode}}">
+              <view class="checkbox {{item.selected ? 'checked' : ''}}">
+                <text wx:if="{{item.selected}}">✓</text>
+              </view>
+            </view>
+            <view class="checkbox {{item.completed ? 'checked' : ''}}" bindtap="toggleTodo" data-item="{{item}}" wx:if="{{!todosBatchMode}}">
+              <text wx:if="{{item.completed}}">✓</text>
+            </view>
+            <view class="todo-info">
+              <text class="todo-text">{{item.content}}</text>
+              <text class="todo-time">{{item.createTimeStr}}</text>
+            </view>
+            <text class="todo-delete" bindtap="deleteTodo" data-id="{{item._id}}" wx:if="{{!todosBatchMode}}">删除</text>
+          </view>
+        </view>
+      </block>
+    </view>
+  </scroll-view>
+</view>
+
+<!-- Share Modal -->
+<view class="modal {{shareShow ? 'show' : ''}}">
+  <view class="modal-mask" bindtap="closeShareModal"></view>
+  <view class="modal-content">
+    <view class="modal-header">设置分享密码</view>
+    <view class="modal-body">
+      <input type="text" placeholder="请输入4-6位分享密码" value="{{sharePassword}}" bindinput="onSharePasswordInput" maxlength="6" />
+    </view>
+    <view class="modal-footer">
+      <button class="btn-cancel" bindtap="closeShareModal">取消</button>
+      <button class="btn-confirm" bindtap="confirmShare">确定</button>
+    </view>
+  </view>
+</view>
+
+<!-- Todo Edit Modal -->
+<view class="modal {{todoEditShow ? 'show' : ''}}">
+  <view class="modal-mask" bindtap="closeTodoEditModal"></view>
+  <view class="modal-content">
+    <view class="modal-header">编辑待办</view>
+    <view class="modal-body">
+      <input type="text" placeholder="请输入待办内容" value="{{editTodoContent}}" bindinput="onEditTodoInput" />
+    </view>
+    <view class="modal-footer">
+      <button class="btn-cancel" bindtap="closeTodoEditModal">取消</button>
+      <button class="btn-confirm" bindtap="confirmEditTodo">确定</button>
+    </view>
+  </view>
+</view>

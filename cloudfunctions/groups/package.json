@@ -1,0 +1,9 @@
+{
+  "name": "groups",
+  "version": "1.0.0",
+  "description": "Group sharing cloud function",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}
