@@ -66,6 +66,12 @@ exports.main = async (event, context) => {
         return await deleteGroupTodo(data, openid);
       case 'toggleTodo':
         return await toggleGroupTodo(data, openid);
+      case 'getJoinRequests':
+        return await getJoinRequests(data, openid);
+      case 'approveJoin':
+        return await approveJoinRequest(data, openid);
+      case 'rejectJoin':
+        return await rejectJoinRequest(data, openid);
       default:
         return { code: -1, message: 'Unknown action', data: null };
     }
@@ -130,7 +136,69 @@ async function joinGroup(data, openid) {
     return { code: -1, message: 'Already a member of this group', data: null };
   }
 
-  // Add member
+  // Check if user was previously kicked from this group
+  // Query all history records for this user and group
+  const historyRes = await db.collection('group_history').where({
+    groupId: groupData._id,
+    userOpenid: openid
+  }).get();
+  
+  console.log('History query result count:', historyRes.data.length);
+  console.log('History data:', JSON.stringify(historyRes.data));
+  
+  // Check if any record has kickedBy field (meaning user was kicked)
+  let wasKicked = false;
+  for (const record of historyRes.data) {
+    console.log('Checking record:', record._id, 'kickedBy:', record.kickedBy);
+    if (record.kickedBy) {
+      wasKicked = true;
+      break;
+    }
+  }
+  
+  console.log('Was kicked:', wasKicked);
+
+  if (wasKicked) {
+    // User was kicked, need creator approval
+    // Check if there's already a pending request
+    const existingRequest = await db.collection('join_requests').where({
+      groupId: groupData._id,
+      userOpenid: openid,
+      status: 'pending'
+    }).get();
+
+    if (existingRequest.data.length > 0) {
+      return { code: -1, message: 'Join request already pending', data: null };
+    }
+
+    // Create join request
+    const userRes = await db.collection('users').where({ _openid: openid }).get();
+    const userInfo = userRes.data.length > 0 ? userRes.data[0] : null;
+
+    await db.collection('join_requests').add({
+      data: {
+        groupId: groupData._id,
+        groupName: groupData.name,
+        userOpenid: openid,
+        userName: userInfo ? userInfo.nickName : '用户',
+        userAvatar: userInfo ? userInfo.avatarUrl : '',
+        status: 'pending',
+        createTime: new Date()
+      }
+    });
+
+    return {
+      code: 1,
+      message: 'Join request sent, waiting for creator approval',
+      data: {
+        id: groupData._id,
+        name: groupData.name,
+        code: groupData.code
+      }
+    };
+  }
+
+  // Add member directly (not kicked before)
   await db.collection('groups').doc(groupData._id).update({
     data: {
       members: _.push(openid),
@@ -183,10 +251,35 @@ async function getGroupDetail(data, openid) {
     return { code: -1, message: 'No permission', data: null };
   }
 
+  // Get member details from users collection
+  const memberDetails = [];
+  for (const memberOpenid of group.data.members) {
+    const userRes = await db.collection('users').where({
+      _openid: memberOpenid
+    }).get();
+    
+    if (userRes.data.length > 0) {
+      memberDetails.push({
+        openid: memberOpenid,
+        nickName: userRes.data[0].nickName || '用户',
+        avatarUrl: userRes.data[0].avatarUrl || ''
+      });
+    } else {
+      memberDetails.push({
+        openid: memberOpenid,
+        nickName: '用户',
+        avatarUrl: ''
+      });
+    }
+  }
+
   return {
     code: 0,
     message: 'success',
-    data: group.data
+    data: {
+      ...group.data,
+      memberDetails: memberDetails
+    }
   };
 }
 
@@ -204,6 +297,10 @@ async function addGroupNote(data, openid) {
     return { code: -1, message: 'No permission', data: null };
   }
 
+  // Get user info
+  const userRes = await db.collection('users').where({ _openid: openid }).get();
+  const userInfo = userRes.data.length > 0 ? userRes.data[0] : null;
+
   const now = new Date();
   const result = await db.collection('group_notes').add({
     data: {
@@ -212,9 +309,19 @@ async function addGroupNote(data, openid) {
       content: content,
       color: color,
       author: openid,
+      authorName: userInfo ? userInfo.nickName : '用户',
+      authorAvatar: userInfo ? userInfo.avatarUrl : '',
       createTime: now,
       updateTime: now,
-      createTimeStr: formatDateTime(now)
+      createTimeStr: formatDateTime(now),
+      updateTimeStr: formatDateTime(now),
+      history: [{
+        action: 'create',
+        operator: openid,
+        operatorName: userInfo ? userInfo.nickName : '用户',
+        time: now,
+        timeStr: formatDateTime(now)
+      }]
     }
   });
 
@@ -249,12 +356,34 @@ async function updateGroupNote(data, openid) {
     return { code: -1, message: 'No permission', data: null };
   }
 
-  const updateData = { updateTime: new Date() };
+  // Get user info
+  const userRes = await db.collection('users').where({ _openid: openid }).get();
+  const userInfo = userRes.data.length > 0 ? userRes.data[0] : null;
+
+  const now = new Date();
+  const updateData = { 
+    updateTime: now,
+    updateTimeStr: formatDateTime(now)
+  };
   if (title !== undefined) updateData.title = title;
   if (content !== undefined) updateData.content = content;
   if (color !== undefined) updateData.color = color;
 
-  await db.collection('group_notes').doc(id).update({ data: updateData });
+  // Add history record
+  const historyItem = {
+    action: 'update',
+    operator: openid,
+    operatorName: userInfo ? userInfo.nickName : '用户',
+    time: now,
+    timeStr: formatDateTime(now)
+  };
+
+  await db.collection('group_notes').doc(id).update({ 
+    data: {
+      ...updateData,
+      history: _.push(historyItem)
+    }
+  });
 
   return { code: 0, message: 'success', data: null };
 }
@@ -458,7 +587,61 @@ async function rejoinGroup(data, openid) {
     return { code: -1, message: 'Already a member of this group', data: null };
   }
 
-  // Add member back
+  // Check if user was previously kicked from this group
+  const historyRes = await db.collection('group_history').where({
+    groupId: groupId,
+    userOpenid: openid
+  }).get();
+  
+  // Check if any record has kickedBy field (meaning user was kicked)
+  let wasKicked = false;
+  for (const record of historyRes.data) {
+    if (record.kickedBy) {
+      wasKicked = true;
+      break;
+    }
+  }
+
+  if (wasKicked) {
+    // Check if there's already a pending request
+    const existingRequest = await db.collection('join_requests').where({
+      groupId: groupId,
+      userOpenid: openid,
+      status: 'pending'
+    }).get();
+
+    if (existingRequest.data.length > 0) {
+      return { code: -1, message: 'Join request already pending', data: null };
+    }
+
+    // Create join request
+    const userRes = await db.collection('users').where({ _openid: openid }).get();
+    const userInfo = userRes.data.length > 0 ? userRes.data[0] : null;
+
+    await db.collection('join_requests').add({
+      data: {
+        groupId: groupId,
+        groupName: group.data.name,
+        userOpenid: openid,
+        userName: userInfo ? userInfo.nickName : '用户',
+        userAvatar: userInfo ? userInfo.avatarUrl : '',
+        status: 'pending',
+        createTime: new Date()
+      }
+    });
+
+    return {
+      code: 1,
+      message: 'Join request sent, waiting for creator approval',
+      data: {
+        id: groupId,
+        name: group.data.name,
+        code: group.data.code
+      }
+    };
+  }
+
+  // Add member back (only if not kicked)
   await db.collection('groups').doc(groupId).update({
     data: {
       members: _.push(openid),
@@ -547,6 +730,10 @@ async function addGroupTodo(data, openid) {
     return { code: -1, message: 'Not a member of this group', data: null };
   }
 
+  // Get user info
+  const userRes = await db.collection('users').where({ _openid: openid }).get();
+  const userInfo = userRes.data.length > 0 ? userRes.data[0] : null;
+
   const now = new Date();
   const result = await db.collection('group_todos').add({
     data: {
@@ -554,8 +741,19 @@ async function addGroupTodo(data, openid) {
       content: content,
       completed: false,
       creator: openid,
+      creatorName: userInfo ? userInfo.nickName : '用户',
+      creatorAvatar: userInfo ? userInfo.avatarUrl : '',
       createTime: now,
-      updateTime: now
+      updateTime: now,
+      createTimeStr: formatDateTime(now),
+      updateTimeStr: formatDateTime(now),
+      history: [{
+        action: 'create',
+        operator: openid,
+        operatorName: userInfo ? userInfo.nickName : '用户',
+        time: now,
+        timeStr: formatDateTime(now)
+      }]
     }
   });
 
@@ -615,10 +813,27 @@ async function updateGroupTodo(data, openid) {
     return { code: -1, message: 'Not a member of this group', data: null };
   }
 
+  // Get user info
+  const userRes = await db.collection('users').where({ _openid: openid }).get();
+  const userInfo = userRes.data.length > 0 ? userRes.data[0] : null;
+
+  const now = new Date();
+
+  // Add history record
+  const historyItem = {
+    action: 'update',
+    operator: openid,
+    operatorName: userInfo ? userInfo.nickName : '用户',
+    time: now,
+    timeStr: formatDateTime(now)
+  };
+
   await db.collection('group_todos').doc(id).update({
     data: {
       content: content,
-      updateTime: new Date()
+      updateTime: now,
+      updateTimeStr: formatDateTime(now),
+      history: _.push(historyItem)
     }
   });
 
@@ -668,12 +883,141 @@ async function toggleGroupTodo(data, openid) {
     return { code: -1, message: 'Not a member of this group', data: null };
   }
 
+  // Get user info
+  const userRes = await db.collection('users').where({ _openid: openid }).get();
+  const userInfo = userRes.data.length > 0 ? userRes.data[0] : null;
+
+  const now = new Date();
+
+  // Add history record
+  const historyItem = {
+    action: completed ? 'complete' : 'uncomplete',
+    operator: openid,
+    operatorName: userInfo ? userInfo.nickName : '用户',
+    time: now,
+    timeStr: formatDateTime(now)
+  };
+
   await db.collection('group_todos').doc(id).update({
     data: {
       completed: completed,
-      updateTime: new Date()
+      updateTime: now,
+      updateTimeStr: formatDateTime(now),
+      history: _.push(historyItem)
     }
   });
 
   return { code: 0, message: 'success', data: null };
+}
+
+// Get join requests (for creator)
+async function getJoinRequests(data, openid) {
+  const { groupId } = data || {};
+  
+  if (!groupId) {
+    return { code: -1, message: 'Group ID is required', data: null };
+  }
+
+  const group = await db.collection('groups').doc(groupId).get();
+  if (!group.data) {
+    return { code: -1, message: 'Group not found', data: null };
+  }
+
+  // Only creator can see join requests
+  if (group.data.creator !== openid) {
+    return { code: -1, message: 'Only creator can view join requests', data: null };
+  }
+
+  const requests = await db.collection('join_requests').where({
+    groupId: groupId,
+    status: 'pending'
+  }).orderBy('createTime', 'desc').get();
+
+  return {
+    code: 0,
+    message: 'success',
+    data: {
+      list: requests.data || []
+    }
+  };
+}
+
+// Approve join request
+async function approveJoinRequest(data, openid) {
+  const { requestId } = data || {};
+  
+  if (!requestId) {
+    return { code: -1, message: 'Request ID is required', data: null };
+  }
+
+  const request = await db.collection('join_requests').doc(requestId).get();
+  if (!request.data) {
+    return { code: -1, message: 'Request not found', data: null };
+  }
+
+  const requestData = request.data;
+
+  // Check if user is creator of the group
+  const group = await db.collection('groups').doc(requestData.groupId).get();
+  if (!group.data) {
+    return { code: -1, message: 'Group not found', data: null };
+  }
+
+  if (group.data.creator !== openid) {
+    return { code: -1, message: 'Only creator can approve requests', data: null };
+  }
+
+  // Add member to group
+  await db.collection('groups').doc(requestData.groupId).update({
+    data: {
+      members: _.push(requestData.userOpenid),
+      updateTime: new Date()
+    }
+  });
+
+  // Update request status
+  await db.collection('join_requests').doc(requestId).update({
+    data: {
+      status: 'approved',
+      updateTime: new Date()
+    }
+  });
+
+  return { code: 0, message: 'Join request approved', data: null };
+}
+
+// Reject join request
+async function rejectJoinRequest(data, openid) {
+  const { requestId } = data || {};
+  
+  if (!requestId) {
+    return { code: -1, message: 'Request ID is required', data: null };
+  }
+
+  const request = await db.collection('join_requests').doc(requestId).get();
+  if (!request.data) {
+    return { code: -1, message: 'Request not found', data: null };
+  }
+
+  const requestData = request.data;
+
+  // Check if user is creator of the group
+  const group = await db.collection('groups').doc(requestData.groupId).get();
+  if (!group.data) {
+    return { code: -1, message: 'Group not found', data: null };
+  }
+
+  if (group.data.creator !== openid) {
+    return { code: -1, message: 'Only creator can reject requests', data: null };
+  }
+
+  // Update request status
+  await db.collection('join_requests').doc(requestId).update({
+    data: {
+      status: 'rejected',
+      updateTime: new Date()
+    }
+  });
+
+  return { code: 0, message: 'Join request rejected', data: null };
 }

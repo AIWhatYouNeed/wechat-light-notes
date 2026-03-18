@@ -26,14 +26,19 @@ Page({
   },
 
   onShow() {
-    // Refresh user info in case it was updated in mine page
+    // Check login status first
     const userInfo = wx.getStorageSync('userInfo');
-    if (userInfo) {
-      this.setData({ userInfo });
+    if (!userInfo || !userInfo.openid) {
+      // Not logged in, redirect to login page
+      wx.redirectTo({
+        url: '/pages/index/index'
+      });
+      return;
     }
-    if (this.data.userInfo) {
-      this.loadData();
-    }
+    
+    // Refresh user info in case it was updated in mine page
+    this.setData({ userInfo });
+    this.loadData();
   },
 
   onPullDownRefresh() {

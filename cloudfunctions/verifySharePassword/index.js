@@ -32,12 +32,28 @@ exports.main = async (event, context) => {
       .orderBy('createTime', 'desc')
       .get();
     
+    // Get author info for each note
+    const notesWithAuthor = await Promise.all(result.data.map(async note => {
+      const authorOpenid = note._openid;
+      const userRes = await db.collection('users').where({
+        _openid: authorOpenid
+      }).get();
+      
+      const userInfo = userRes.data.length > 0 ? userRes.data[0] : null;
+      
+      return {
+        ...note,
+        authorName: userInfo ? userInfo.nickName : '用户',
+        authorAvatar: userInfo ? userInfo.avatarUrl : ''
+      };
+    }));
+    
     return {
       code: 0,
       message: 'success',
       data: {
-        notes: result.data,
-        count: result.data.length
+        notes: notesWithAuthor,
+        count: notesWithAuthor.length
       }
     };
     

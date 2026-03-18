@@ -24,7 +24,7 @@
     "disableSWC": true
   },
   "compileType": "miniprogram",
-  "cloudfunctionRoot": "cloudfunctions",  
+  "cloudfunctionRoot": "cloudfunctions",
   "simulatorPluginLibVersion": {},
   "packOptions": {
     "ignore": [],

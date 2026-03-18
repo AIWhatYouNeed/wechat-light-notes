@@ -8,14 +8,33 @@
     </view>
   </view>
 
+  <!-- Join Requests (Creator only) -->
+  <view class="join-requests-section" wx:if="{{isCreator && joinRequests.length > 0}}">
+    <view class="join-requests-header" bindtap="toggleJoinRequests">
+      <text class="join-requests-title">加入申请 ({{joinRequests.length}})</text>
+      <text class="toggle-icon">{{showJoinRequests ? '▼' : '▶'}}</text>
+    </view>
+    <view class="join-requests-list" wx:if="{{showJoinRequests}}">
+      <view class="join-request-item" wx:for="{{joinRequests}}" wx:key="_id">
+        <image class="request-avatar" src="{{item.userAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+        <text class="request-name">{{item.userName}}</text>
+        <view class="request-actions">
+          <text class="approve-btn" bindtap="approveJoin" data-id="{{item._id}}">同意</text>
+          <text class="reject-btn" bindtap="rejectJoin" data-id="{{item._id}}">拒绝</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <!-- Members List -->
   <view class="members-section" wx:if="{{showMembers}}">
     <view class="members-title">成员列表</view>
     <view class="member-list">
-      <view class="member-item" wx:for="{{groupInfo.members}}" wx:key="*this">
-        <text class="member-name">用户 {{item.substring(0, 8)}}...</text>
-        <text class="member-tag creator" wx:if="{{item === groupInfo.creator}}">创建者</text>
-        <text class="kick-btn" wx:if="{{isCreator && item !== groupInfo.creator}}" bindtap="kickMember" data-openid="{{item}}">踢出</text>
+      <view class="member-item" wx:for="{{groupInfo.memberDetails}}" wx:key="openid">
+        <image class="member-avatar" src="{{item.avatarUrl || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+        <text class="member-name">{{item.nickName}}</text>
+        <text class="member-tag creator" wx:if="{{item.openid === groupInfo.creator}}">创建者</text>
+        <text class="kick-btn" wx:if="{{isCreator && item.openid !== groupInfo.creator}}" bindtap="kickMember" data-openid="{{item.openid}}">踢出</text>
       </view>
     </view>
   </view>
@@ -47,7 +66,7 @@
     </view>
     <block wx:if="{{!notesCollapsed && notes.length > 0}}">
       <view class="note-list">
-        <view class="note-item {{notesBatchMode ? 'batch-item' : ''}} {{item.selected ? 'selected' : ''}}" wx:for="{{notes}}" wx:key="_id" style="background: {{item.color}}" bindtap="{{notesBatchMode ? 'toggleNoteSelect' : 'showEditModal'}}" data-note="{{item}}" data-id="{{item._id}}">
+        <view class="note-item {{notesBatchMode ? 'batch-item' : ''}} {{item.selected ? 'selected' : ''}}" wx:for="{{notes}}" wx:key="_id" style="background: {{item.color}}" bindtap="{{notesBatchMode ? 'toggleNoteSelect' : 'previewNote'}}" data-note="{{item}}" data-id="{{item._id}}">
           <view class="batch-checkbox" wx:if="{{notesBatchMode}}">
             <view class="checkbox {{item.selected ? 'checked' : ''}}">
               <text wx:if="{{item.selected}}">✓</text>
@@ -57,9 +76,15 @@
             <text class="note-title">{{item.title || '无标题'}}</text>
             <text class="note-delete" catchtap="deleteNote" data-id="{{item._id}}" wx:if="{{!notesBatchMode}}">删除</text>
           </view>
-          <view class="note-content">{{item.content}}</view>
+          <view class="note-content {{item.content.length > 100 ? 'collapsed' : ''}}">{{item.content}}</view>
+          <view class="note-expand" wx:if="{{item.content.length > 100 && !notesBatchMode}}">点击查看详情</view>
           <view class="note-footer">
+            <view class="note-author">
+              <image class="author-avatar" src="{{item.authorAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+              <text class="author-name">{{item.authorName}}</text>
+            </view>
             <text class="note-time">{{item.createTimeStr}}</text>
+            <text class="history-btn" catchtap="showNoteHistory" data-note="{{item}}" wx:if="{{!notesBatchMode && item.history && item.history.length > 1}}">历史</text>
           </view>
         </view>
       </view>
@@ -90,7 +115,7 @@
     </view>
     <block wx:if="{{!todosCollapsed && !todosBatchMode}}">
       <view class="todo-input-box">
-        <input class="todo-input" placeholder="添加新的共享待办..." value="{{newTodo}}" bindinput="onTodoInput" confirm-type="done" bindconfirm="addTodo" />
+        <textarea class="todo-input" placeholder="添加新的共享待办..." value="{{newTodo}}" bindinput="onTodoInput" maxlength="2000" auto-height />
         <view class="todo-add-btn" bindtap="addTodo">+</view>
       </view>
     </block>
@@ -105,13 +130,23 @@
           <view class="checkbox {{item.completed ? 'checked' : ''}}" bindtap="toggleTodo" data-item="{{item}}" wx:if="{{!todosBatchMode}}">
             <text wx:if="{{item.completed}}">✓</text>
           </view>
-          <view class="todo-info" bindtap="editTodo" data-item="{{item}}" wx:if="{{!todosBatchMode}}">
-            <text class="todo-text">{{item.content}}</text>
-            <text class="todo-time">{{item.createTimeStr}}</text>
+          <view class="todo-info" bindtap="previewTodo" data-item="{{item}}" wx:if="{{!todosBatchMode}}">
+            <text class="todo-text {{item.content.length > 50 ? 'collapsed' : ''}}">{{item.content}}</text>
+            <view class="todo-expand" wx:if="{{item.content.length > 50}}">点击查看详情</view>
+            <view class="todo-meta">
+              <image class="todo-author-avatar" src="{{item.creatorAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+              <text class="todo-author-name">{{item.creatorName}}</text>
+              <text class="todo-time">{{item.createTimeStr}}</text>
+              <text class="history-btn-small" catchtap="showTodoHistory" data-todo="{{item}}" wx:if="{{item.history && item.history.length > 1}}">历史</text>
+            </view>
           </view>
           <view class="todo-info" wx:if="{{todosBatchMode}}">
             <text class="todo-text">{{item.content}}</text>
-            <text class="todo-time">{{item.createTimeStr}}</text>
+            <view class="todo-meta">
+              <image class="todo-author-avatar" src="{{item.creatorAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+              <text class="todo-author-name">{{item.creatorName}}</text>
+              <text class="todo-time">{{item.createTimeStr}}</text>
+            </view>
           </view>
           <text class="todo-delete" bindtap="deleteTodo" data-id="{{item._id}}" wx:if="{{!todosBatchMode}}">删除</text>
         </view>
@@ -131,23 +166,30 @@
 <!-- Add Note Modal -->
 <view class="modal {{showAddModal ? 'show' : ''}}">
   <view class="modal-mask" bindtap="closeAddModal"></view>
-  <view class="modal-content">
-    <view class="modal-header">添加共享小记</view>
-    <view class="modal-body">
-      <input type="text" placeholder="标题（可选）" value="{{noteTitle}}" bindinput="onTitleInput" />
-      <textarea placeholder="请输入内容" value="{{noteContent}}" bindinput="onContentInput" maxlength="500" />
-      <view class="color-picker">
-        <text class="color-label">选择背景色：</text>
-        <view class="color-list">
-          <view class="color-item {{selectedColor === item ? 'selected' : ''}}" wx:for="{{colors}}" wx:key="*this" style="background: {{item}}" bindtap="selectColor" data-color="{{item}}">
-            <text wx:if="{{selectedColor === item}}">✓</text>
+  <view class="modal-content note-edit-full">
+    <view class="note-edit-container">
+      <view class="note-edit-header">
+        <text class="note-edit-close" bindtap="closeAddModal">取消</text>
+        <text class="note-edit-title">添加共享小记</text>
+        <text class="note-edit-save" bindtap="addNote">添加</text>
+      </view>
+      <view class="note-edit-scroll">
+        <view class="note-edit-form">
+          <input class="note-edit-title-input" placeholder="标题（可选）" value="{{noteTitle}}" bindinput="onTitleInput" />
+          <textarea class="note-edit-content-input" placeholder="记录你的想法..." value="{{noteContent}}" bindinput="onContentInput" maxlength="2000" />
+          <text class="note-edit-word-count">{{noteContent.length}}/2000</text>
+        </view>
+        <view class="note-edit-color-section">
+          <text class="note-edit-color-label">背景颜色</text>
+          <view class="note-edit-colors">
+            <view class="note-edit-color-item {{selectedColor === item ? 'active' : ''}}" wx:for="{{colors}}" wx:key="*this" style="background: {{item}}; border: {{item === '#ffffff' ? '1rpx solid #ddd' : 'none'}}" bindtap="selectColor" data-color="{{item}}"></view>
           </view>
         </view>
+        <view class="note-edit-preview" style="background: {{selectedColor}};">
+          <text class="note-edit-preview-title">{{noteTitle || '预览标题'}}</text>
+          <text class="note-edit-preview-content">{{noteContent || '预览内容...'}}</text>
+        </view>
       </view>
-    </view>
-    <view class="modal-footer">
-      <button class="btn-cancel" bindtap="closeAddModal">取消</button>
-      <button class="btn-confirm" bindtap="addNote">添加</button>
     </view>
   </view>
 </view>
@@ -155,23 +197,30 @@
 <!-- Edit Note Modal -->
 <view class="modal {{showEditModal ? 'show' : ''}}">
   <view class="modal-mask" bindtap="closeEditModal"></view>
-  <view class="modal-content">
-    <view class="modal-header">编辑共享小记</view>
-    <view class="modal-body">
-      <input type="text" placeholder="标题（可选）" value="{{noteTitle}}" bindinput="onTitleInput" />
-      <textarea placeholder="请输入内容" value="{{noteContent}}" bindinput="onContentInput" maxlength="500" />
-      <view class="color-picker">
-        <text class="color-label">选择背景色：</text>
-        <view class="color-list">
-          <view class="color-item {{selectedColor === item ? 'selected' : ''}}" wx:for="{{colors}}" wx:key="*this" style="background: {{item}}" bindtap="selectColor" data-color="{{item}}">
-            <text wx:if="{{selectedColor === item}}">✓</text>
+  <view class="modal-content note-edit-full">
+    <view class="note-edit-container">
+      <view class="note-edit-header">
+        <text class="note-edit-close" bindtap="closeEditModal">取消</text>
+        <text class="note-edit-title">编辑共享小记</text>
+        <text class="note-edit-save" bindtap="updateNote">保存</text>
+      </view>
+      <view class="note-edit-scroll">
+        <view class="note-edit-form">
+          <input class="note-edit-title-input" placeholder="标题（可选）" value="{{noteTitle}}" bindinput="onTitleInput" />
+          <textarea class="note-edit-content-input" placeholder="记录你的想法..." value="{{noteContent}}" bindinput="onContentInput" maxlength="2000" />
+          <text class="note-edit-word-count">{{noteContent.length}}/2000</text>
+        </view>
+        <view class="note-edit-color-section">
+          <text class="note-edit-color-label">背景颜色</text>
+          <view class="note-edit-colors">
+            <view class="note-edit-color-item {{selectedColor === item ? 'active' : ''}}" wx:for="{{colors}}" wx:key="*this" style="background: {{item}}; border: {{item === '#ffffff' ? '1rpx solid #ddd' : 'none'}}" bindtap="selectColor" data-color="{{item}}"></view>
           </view>
         </view>
+        <view class="note-edit-preview" style="background: {{selectedColor}};">
+          <text class="note-edit-preview-title">{{noteTitle || '预览标题'}}</text>
+          <text class="note-edit-preview-content">{{noteContent || '预览内容...'}}</text>
+        </view>
       </view>
-    </view>
-    <view class="modal-footer">
-      <button class="btn-cancel" bindtap="closeEditModal">取消</button>
-      <button class="btn-confirm" bindtap="updateNote">保存</button>
     </view>
   </view>
 </view>
@@ -187,6 +236,52 @@
     <view class="modal-footer">
       <button class="btn-cancel" bindtap="closeTodoEditModal">取消</button>
       <button class="btn-confirm" bindtap="confirmEditTodo">保存</button>
+    </view>
+  </view>
+</view>
+
+<!-- Preview Modal -->
+<view class="modal {{showPreviewModal ? 'show' : ''}}">
+  <view class="modal-mask" bindtap="closePreviewModal"></view>
+  <view class="modal-content preview-modal">
+    <view class="modal-header">{{previewData.title || '无标题'}}</view>
+    <view class="modal-body preview-body">
+      <scroll-view scroll-y class="preview-scroll">
+        <text class="preview-content">{{previewData.content}}</text>
+      </scroll-view>
+      <view class="preview-meta">
+        <view class="preview-author">
+          <image class="preview-avatar" src="{{previewData.authorAvatar || previewData.creatorAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+          <text>{{previewData.authorName || previewData.creatorName}}</text>
+        </view>
+        <text class="preview-time">{{previewData.createTimeStr}}</text>
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button class="btn-cancel" bindtap="closePreviewModal">关闭</button>
+      <button class="btn-confirm" bindtap="editFromPreview">编辑</button>
+    </view>
+  </view>
+</view>
+
+<!-- History Modal -->
+<view class="modal {{showHistoryModal ? 'show' : ''}}">
+  <view class="modal-mask" bindtap="closeHistoryModal"></view>
+  <view class="modal-content">
+    <view class="modal-header">修改历史</view>
+    <view class="modal-body history-body">
+      <view class="history-list">
+        <view class="history-item" wx:for="{{currentHistory}}" wx:key="index">
+          <view class="history-dot {{item.action}}"></view>
+          <view class="history-info">
+            <text class="history-desc">{{item.operatorName}}{{item.action === 'create' ? '创建了' : item.action === 'update' ? '修改了' : item.action === 'complete' ? '完成了' : item.action === 'uncomplete' ? '取消完成了' : item.action}}这条{{currentHistoryType === 'todo' ? '待办' : '小记'}}</text>
+            <text class="history-time">{{item.timeStr}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button class="btn-confirm" bindtap="closeHistoryModal">关闭</button>
     </view>
   </view>
 </view>

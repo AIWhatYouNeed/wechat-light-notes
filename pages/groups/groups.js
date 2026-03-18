@@ -133,6 +133,16 @@ Page({
           wx.showToast({ title: '加入成功' });
           this.setData({ showJoinModal: false });
           this.loadGroups();
+        } else if (res.result && res.result.code === 1) {
+          // Join request sent, waiting for approval
+          wx.showModal({
+            title: '申请已发送',
+            content: '您曾被踢出该群组，需要创建者同意才能重新加入。请等待创建者审核。',
+            showCancel: false,
+            success: () => {
+              this.setData({ showJoinModal: false });
+            }
+          });
         } else {
           wx.showToast({ title: res.result.message || '加入失败', icon: 'none' });
         }
@@ -190,7 +200,7 @@ Page({
     this.setData({ showHistory: !this.data.showHistory });
   },
 
-  rejoinGroup(e) {
+    rejoinGroup(e) {
     const groupId = e.currentTarget.dataset.id;
     wx.cloud.callFunction({
       name: 'groups',
@@ -203,6 +213,16 @@ Page({
           wx.showToast({ title: '重新加入成功' });
           this.loadGroups();
           this.loadHistory();
+        } else if (res.result && res.result.code === 1) {
+          // Join request sent, waiting for approval
+          wx.showModal({
+            title: '申请已发送',
+            content: '您曾被踢出该群组，需要创建者同意才能重新加入。请等待创建者审核。',
+            showCancel: false,
+            success: () => {
+              this.loadHistory();
+            }
+          });
         } else {
           wx.showToast({ title: res.result.message || '加入失败', icon: 'none' });
         }

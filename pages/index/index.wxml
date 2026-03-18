@@ -1,10 +1,21 @@
-<view class="container {{animationClass}}" bindtap="onEnter">
+<view class="container {{animationClass}}">
   <view class="logo-section">
     <image class="logo" src="/static/compressed.png" mode="aspectFit"></image>
     <text class="title">随便记</text>
     <text class="subtitle">水火橙の记忆宫殿</text>
   </view>
-  <view class="loading">
+  
+  <!-- Not logged in - show login button -->
+  <view class="login-section" wx:if="{{!isLoggedIn}}">
+    <button class="login-btn" open-type="getUserInfo" bind:getuserinfo="onGetUserInfo">
+      <text class="login-icon">微信</text>
+      <text>一键登录</text>
+    </button>
+    <text class="login-tip">登录后可同步您的小记和待办</text>
+  </view>
+  
+  <!-- Loading -->
+  <view class="loading" wx:if="{{isLoading}}">
     <view class="dot"></view>
     <view class="dot"></view>
     <view class="dot"></view>

@@ -36,10 +36,22 @@ Page({
       return;
     }
 
+    // Update locally
     const userInfo = { ...this.data.userInfo, nickName: newNickname };
     this.setData({ userInfo, showNicknameModal: false });
     wx.setStorageSync('userInfo', userInfo);
-    wx.showToast({ title: '昵称已修改' });
+    
+    // Update in cloud
+    wx.cloud.callFunction({
+      name: 'updateUser',
+      data: { nickName: newNickname },
+      success: () => {
+        wx.showToast({ title: '昵称已修改' });
+      },
+      fail: (err) => {
+        console.error('Update nickname failed:', err);
+      }
+    });
   },
 
   onLogout() {
@@ -54,6 +66,7 @@ Page({
             title: '已退出',
             success: () => {
               setTimeout(() => {
+                // Redirect to login page
                 wx.reLaunch({ url: '/pages/index/index' });
               }, 500);
             }
@@ -86,12 +99,25 @@ Page({
       filePath: filePath,
       success: res => {
         const fileID = res.fileID;
-        // Update user info
+        // Update user info locally
         const userInfo = { ...this.data.userInfo, avatarUrl: fileID };
         this.setData({ userInfo });
         wx.setStorageSync('userInfo', userInfo);
-        wx.hideLoading();
-        wx.showToast({ title: '头像已更新' });
+        
+        // Update in cloud database
+        wx.cloud.callFunction({
+          name: 'updateUser',
+          data: { avatarUrl: fileID },
+          success: () => {
+            wx.hideLoading();
+            wx.showToast({ title: '头像已更新' });
+          },
+          fail: err => {
+            wx.hideLoading();
+            console.error('Update avatar failed:', err);
+            wx.showToast({ title: '头像已更新' });
+          }
+        });
       },
       fail: err => {
         wx.hideLoading();

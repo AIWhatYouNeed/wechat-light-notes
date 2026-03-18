@@ -20,7 +20,10 @@
         <view class="note-item" wx:for="{{sharedNotes}}" wx:key="_id" style="background: {{item.color || '#ffffff'}};">
           <text class="note-title">{{item.title || '无标题'}}</text>
           <text class="note-content">{{item.content}}</text>
-          <text class="note-author">分享者: {{item._openid}}</text>
+          <view class="note-author-box">
+            <image class="author-avatar-small" src="{{item.authorAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+            <text class="note-author">{{item.authorName}}</text>
+          </view>
           <text class="note-time">{{item.createTime}}</text>
         </view>
       </view>

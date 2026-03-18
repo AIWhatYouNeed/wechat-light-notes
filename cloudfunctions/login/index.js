@@ -9,6 +9,7 @@ cloud.init({
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext();
   const { OPENID, APPID, UNIONID } = wxContext;
+  const { nickName, avatarUrl } = event || {};
   
   const db = cloud.database();
   
@@ -19,10 +20,10 @@ exports.main = async (event, context) => {
     }).get();
     
     let userInfo;
+    const now = new Date();
     
     if (userResult.data.length === 0) {
       // New user, create record
-      const now = new Date();
       const result = await db.collection('users').add({
         data: {
           _openid: OPENID,
@@ -30,20 +31,36 @@ exports.main = async (event, context) => {
           unionid: UNIONID,
           createTime: now,
           updateTime: now,
-          nickName: '',
-          avatarUrl: ''
+          nickName: nickName || '',
+          avatarUrl: avatarUrl || ''
         }
       });
       
       userInfo = {
         _id: result._id,
         _openid: OPENID,
-        nickName: '',
-        avatarUrl: ''
+        nickName: nickName || '',
+        avatarUrl: avatarUrl || ''
       };
     } else {
-      // Existing user
+      // Existing user - update info if provided
       userInfo = userResult.data[0];
+      
+      if (nickName || avatarUrl) {
+        const updateData = {
+          updateTime: now
+        };
+        if (nickName) updateData.nickName = nickName;
+        if (avatarUrl) updateData.avatarUrl = avatarUrl;
+        
+        await db.collection('users').doc(userInfo._id).update({
+          data: updateData
+        });
+        
+        // Update local userInfo
+        if (nickName) userInfo.nickName = nickName;
+        if (avatarUrl) userInfo.avatarUrl = avatarUrl;
+      }
     }
     
     return {

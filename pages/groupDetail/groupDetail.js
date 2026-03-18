@@ -23,13 +23,27 @@ Page({
     // Todo edit
     showTodoEditModal: false,
     editTodoContent: '',
-    currentEditTodo: null
+    currentEditTodo: null,
+    // History
+    showHistoryModal: false,
+    currentHistory: [],
+    currentHistoryType: 'note',
+    // Preview
+    showPreviewModal: false,
+    previewData: {},
+    previewType: 'note',
+    // Join requests
+    joinRequests: [],
+    showJoinRequests: false
   },
 
   onLoad(options) {
     const groupId = options.id;
     this.setData({ groupId });
-    this.loadGroupInfo();
+    this.loadGroupInfo(() => {
+      // Load join requests after group info is loaded (to check isCreator)
+      this.loadJoinRequests();
+    });
     this.loadGroupNotes();
     this.loadGroupTodos();
   },
@@ -38,12 +52,17 @@ Page({
     if (this.data.groupId) {
       this.loadGroupNotes();
       this.loadGroupTodos();
+      // Only load join requests if we already know user is creator
+      if (this.data.isCreator) {
+        this.loadJoinRequests();
+      }
     }
   },
 
-  loadGroupInfo() {
-    const app = getApp();
-    const userOpenid = app.globalData && app.globalData.openid;
+  loadGroupInfo(callback) {
+    // Get openid from storage
+    const userInfo = wx.getStorageSync('userInfo');
+    const userOpenid = userInfo ? userInfo.openid : null;
     
     wx.cloud.callFunction({
       name: 'groups',
@@ -54,9 +73,14 @@ Page({
       success: res => {
         if (res.result && res.result.code === 0) {
           const groupInfo = res.result.data;
+          const isCreator = groupInfo.creator === userOpenid;
+          console.log('Group loaded, creator:', groupInfo.creator, 'user:', userOpenid, 'isCreator:', isCreator);
           this.setData({
             groupInfo: groupInfo,
-            isCreator: groupInfo.creator === userOpenid
+            isCreator: isCreator
+          }, () => {
+            // Call callback after state is updated
+            if (callback) callback();
           });
         }
       }
@@ -498,6 +522,155 @@ Page({
             this.exitTodosBatchMode();
             this.loadGroupTodos();
           });
+        }
+      }
+    });
+  },
+
+  // History
+  showNoteHistory(e) {
+    const note = e.currentTarget.dataset.note;
+    if (note.history && note.history.length > 0) {
+      // Reverse to show newest first
+      const history = [...note.history].reverse();
+      this.setData({
+        showHistoryModal: true,
+        currentHistory: history,
+        currentHistoryType: 'note'
+      });
+    }
+  },
+
+  showTodoHistory(e) {
+    const todo = e.currentTarget.dataset.todo;
+    if (todo.history && todo.history.length > 0) {
+      const history = [...todo.history].reverse();
+      this.setData({
+        showHistoryModal: true,
+        currentHistory: history,
+        currentHistoryType: 'todo'
+      });
+    }
+  },
+
+  closeHistoryModal() {
+    this.setData({
+      showHistoryModal: false,
+      currentHistory: [],
+      currentHistoryType: 'note'
+    });
+  },
+
+  // Preview
+  previewNote(e) {
+    const note = e.currentTarget.dataset.note;
+    this.setData({
+      showPreviewModal: true,
+      previewData: note,
+      previewType: 'note'
+    });
+  },
+
+  previewTodo(e) {
+    const todo = e.currentTarget.dataset.item;
+    this.setData({
+      showPreviewModal: true,
+      previewData: todo,
+      previewType: 'todo'
+    });
+  },
+
+  closePreviewModal() {
+    this.setData({
+      showPreviewModal: false,
+      previewData: {}
+    });
+  },
+
+  editFromPreview() {
+    const { previewData, previewType } = this.data;
+    this.closePreviewModal();
+    
+    if (previewType === 'note') {
+      this.setData({
+        showEditModal: true,
+        currentEditNote: previewData,
+        noteTitle: previewData.title || '',
+        noteContent: previewData.content || '',
+        selectedColor: previewData.color || '#ffffff'
+      });
+    } else {
+      this.setData({
+        showTodoEditModal: true,
+        currentEditTodo: previewData,
+        editTodoContent: previewData.content
+      });
+    }
+  },
+
+  // Join Requests
+  loadJoinRequests() {
+    if (!this.data.isCreator) {
+      console.log('Not creator, skipping join requests load');
+      return;
+    }
+    console.log('Loading join requests for group:', this.data.groupId);
+    
+    wx.cloud.callFunction({
+      name: 'groups',
+      data: {
+        action: 'getJoinRequests',
+        data: { groupId: this.data.groupId }
+      },
+      success: res => {
+        console.log('Join requests response:', res.result);
+        if (res.result && res.result.code === 0) {
+          const requests = res.result.data.list || [];
+          console.log('Join requests loaded:', requests.length);
+          this.setData({ joinRequests: requests });
+        }
+      }
+    });
+  },
+
+  toggleJoinRequests() {
+    this.setData({ showJoinRequests: !this.data.showJoinRequests });
+  },
+
+  approveJoin(e) {
+    const requestId = e.currentTarget.dataset.id;
+    wx.cloud.callFunction({
+      name: 'groups',
+      data: {
+        action: 'approveJoin',
+        data: { requestId }
+      },
+      success: res => {
+        if (res.result && res.result.code === 0) {
+          wx.showToast({ title: '已同意' });
+          this.loadJoinRequests();
+          this.loadGroupInfo();
+        } else {
+          wx.showToast({ title: res.result.message || '操作失败', icon: 'none' });
+        }
+      }
+    });
+  },
+
+  rejectJoin(e) {
+    const requestId = e.currentTarget.dataset.id;
+    wx.cloud.callFunction({
+      name: 'groups',
+      data: {
+        action: 'rejectJoin',
+        data: { requestId }
+      },
+      success: res => {
+        if (res.result && res.result.code === 0) {
+          wx.showToast({ title: '已拒绝' });
+          this.loadJoinRequests();
+        } else {
+          wx.showToast({ title: res.result.message || '操作失败', icon: 'none' });
         }
       }
     });
