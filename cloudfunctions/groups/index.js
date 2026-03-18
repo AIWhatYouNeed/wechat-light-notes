@@ -388,7 +388,7 @@ async function updateGroupNote(data, openid) {
   return { code: 0, message: 'success', data: null };
 }
 
-// Delete group note
+// Delete group note (soft delete)
 async function deleteGroupNote(data, openid) {
   const { id } = data || {};
   
@@ -407,7 +407,13 @@ async function deleteGroupNote(data, openid) {
     return { code: -1, message: 'No permission', data: null };
   }
 
-  await db.collection('group_notes').doc(id).remove();
+  await db.collection('group_notes').doc(id).update({
+    data: {
+      isDeleted: true,
+      deleteTime: new Date(),
+      deletedBy: openid
+    }
+  });
 
   return { code: 0, message: 'success', data: null };
 }
@@ -427,7 +433,8 @@ async function getGroupNotes(data, openid) {
   }
 
   const notes = await db.collection('group_notes').where({
-    groupId: groupId
+    groupId: groupId,
+    isDeleted: _.neq(true)
   }).orderBy('createTime', 'desc').get();
 
   return {
@@ -783,7 +790,8 @@ async function getGroupTodos(data, openid) {
   }
 
   const todos = await db.collection('group_todos').where({
-    groupId: groupId
+    groupId: groupId,
+    isDeleted: _.neq(true)
   }).orderBy('createTime', 'desc').get();
 
   const list = todos.data.map(todo => ({
@@ -840,7 +848,7 @@ async function updateGroupTodo(data, openid) {
   return { code: 0, message: 'success', data: null };
 }
 
-// Delete group todo
+// Delete group todo (soft delete)
 async function deleteGroupTodo(data, openid) {
   const { id } = data || {};
   
@@ -859,7 +867,13 @@ async function deleteGroupTodo(data, openid) {
     return { code: -1, message: 'Not a member of this group', data: null };
   }
 
-  await db.collection('group_todos').doc(id).remove();
+  await db.collection('group_todos').doc(id).update({
+    data: {
+      isDeleted: true,
+      deleteTime: new Date(),
+      deletedBy: openid
+    }
+  });
 
   return { code: 0, message: 'success', data: null };
 }

@@ -54,6 +54,10 @@ Page({
     });
   },
 
+  goToRecycleBin() {
+    wx.navigateTo({ url: '/pages/recycleBin/recycleBin' });
+  },
+
   onLogout() {
     wx.showModal({
       title: '提示',

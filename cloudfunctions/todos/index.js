@@ -213,6 +213,7 @@ async function deleteTodo(data) {
   await db.collection('todos').doc(id).update({
     data: {
       isDeleted: true,
+      deleteTime: new Date(),
       updateTime: new Date()
     }
   });

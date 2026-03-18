@@ -22,7 +22,17 @@ Page({
   },
 
   onLoad() {
+    this.checkAuth();
     this.checkLogin();
+  },
+
+  checkAuth() {
+    const isAuthenticated = wx.getStorageSync('isAuthenticated');
+    if (!isAuthenticated) {
+      wx.redirectTo({ url: '/pages/auth/auth' });
+      return false;
+    }
+    return true;
   },
 
   onShow() {
@@ -139,9 +149,14 @@ Page({
           wx.cloud.callFunction({
             name: 'notes',
             data: { action: 'delete', data: { id } },
-            success: () => {
+            success: (res) => {
+              console.log('Delete note response:', res);
               wx.showToast({ title: '删除成功' });
               this.loadNotes();
+            },
+            fail: (err) => {
+              console.error('Delete note failed:', err);
+              wx.showToast({ title: '删除失败', icon: 'none' });
             }
           });
         }

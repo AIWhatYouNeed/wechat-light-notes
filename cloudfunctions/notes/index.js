@@ -236,6 +236,7 @@ async function deleteNote(data) {
   await db.collection('notes').doc(id).update({
     data: {
       isDeleted: true,
+      deleteTime: new Date(),
       updateTime: new Date()
     }
   });

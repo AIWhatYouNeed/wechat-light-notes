@@ -20,6 +20,14 @@ Page({
   },
 
   checkLoginStatus() {
+    // Check if authenticated first
+    const isAuthenticated = wx.getStorageSync('isAuthenticated');
+    if (!isAuthenticated) {
+      // Not authenticated, go back to auth page
+      wx.redirectTo({ url: '/pages/auth/auth' });
+      return;
+    }
+    
     const userInfo = wx.getStorageSync('userInfo');
     if (userInfo && userInfo.openid) {
       // Already logged in, go to home directly

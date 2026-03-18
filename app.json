@@ -1,12 +1,14 @@
 {
   "pages": [
+    "pages/auth/auth",
     "pages/index/index",
     "pages/home/home",
     "pages/addNote/addNote",
     "pages/mine/mine",
     "pages/share/share",
     "pages/groups/groups",
-    "pages/groupDetail/groupDetail"
+    "pages/groupDetail/groupDetail",
+    "pages/recycleBin/recycleBin"
   ],
   "window": {
     "backgroundTextStyle": "light",

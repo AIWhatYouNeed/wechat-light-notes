@@ -1,0 +1,23 @@
+<view class="container">
+  <view class="auth-box">
+    <view class="lock-icon">🔒</view>
+    <text class="title">访问验证</text>
+    <text class="subtitle">请输入访问密码</text>
+    
+    <input 
+      class="password-input" 
+      type="text" 
+      password="{{true}}"
+      placeholder="请输入密码" 
+      value="{{password}}" 
+      bindinput="onPasswordInput" 
+      maxlength="20"
+      confirm-type="done"
+      bindconfirm="verifyPassword"
+    />
+    
+    <button class="btn-verify" bindtap="verifyPassword" loading="{{loading}}">进入</button>
+    
+    <text class="hint">该小程序仅供授权用户使用</text>
+  </view>
+</view>

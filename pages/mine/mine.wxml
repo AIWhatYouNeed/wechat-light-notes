@@ -14,6 +14,11 @@
   </view>
 
   <view class="menu-list">
+    <view class="menu-item" bindtap="goToRecycleBin">
+      <text class="icon">🗑️</text>
+      <text class="text">回收站</text>
+      <text class="arrow">></text>
+    </view>
     <view class="menu-item" bindtap="onLogout">
       <text class="icon">🚪</text>
       <text class="text">退出登录</text>

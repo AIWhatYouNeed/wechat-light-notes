@@ -1,0 +1,120 @@
+<view class="container">
+  <view class="header">
+    <text class="title">回收站</text>
+    <text class="subtitle">已删除的项目保留15天</text>
+  </view>
+
+  <!-- Tabs -->
+  <view class="tabs">
+    <view class="tab {{activeTab === 'personal' ? 'active' : ''}}" bindtap="switchTab" data-tab="personal">
+      <text>个人项目</text>
+    </view>
+    <view class="tab {{activeTab === 'shared' ? 'active' : ''}}" bindtap="switchTab" data-tab="shared">
+      <text>共享项目</text>
+    </view>
+  </view>
+
+  <!-- Personal Items -->
+  <block wx:if="{{activeTab === 'personal'}}">
+    <!-- Notes -->
+    <view class="section" wx:if="{{personalNotes.length > 0}}">
+      <view class="section-title">小记 ({{personalNotes.length}})</view>
+      <view class="item-list">
+        <view class="item" wx:for="{{personalNotes}}" wx:key="_id" style="background: {{item.color || '#ffffff'}};">
+          <view class="item-content">
+            <text class="item-title">{{item.title || '无标题'}}</text>
+            <text class="item-text">{{item.content}}</text>
+            <text class="item-time">删除时间: {{item.deleteTimeStr}} | {{item.isExpired ? '已过期' : '剩余' + item.remainingDays + '天'}}</text>
+          </view>
+          <view class="item-actions">
+            <text class="restore-btn" bindtap="restorePersonalNote" data-id="{{item._id}}">恢复</text>
+            <text class="delete-btn" bindtap="permanentDeletePersonalNote" data-id="{{item._id}}">彻底删除</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Todos -->
+    <view class="section" wx:if="{{personalTodos.length > 0}}">
+      <view class="section-title">待办 ({{personalTodos.length}})</view>
+      <view class="item-list">
+        <view class="item todo-item" wx:for="{{personalTodos}}" wx:key="_id">
+          <view class="item-content">
+            <text class="item-text">{{item.content}}</text>
+            <text class="item-time">删除时间: {{item.deleteTimeStr}} | {{item.isExpired ? '已过期' : '剩余' + item.remainingDays + '天'}}</text>
+          </view>
+          <view class="item-actions">
+            <text class="restore-btn" bindtap="restorePersonalTodo" data-id="{{item._id}}">恢复</text>
+            <text class="delete-btn" bindtap="permanentDeletePersonalTodo" data-id="{{item._id}}">彻底删除</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-state" wx:if="{{personalNotes.length === 0 && personalTodos.length === 0}}">
+      <image src="/static/icon/empty_fill.png" mode="aspectFit"></image>
+      <text>暂无已删除的个人项目</text>
+    </view>
+  </block>
+
+  <!-- Shared Items -->
+  <block wx:if="{{activeTab === 'shared'}}">
+    <!-- Shared Notes -->
+    <view class="section" wx:if="{{sharedNotes.length > 0}}">
+      <view class="section-title">共享小记 ({{sharedNotes.length}})</view>
+      <view class="item-list">
+        <view class="item" wx:for="{{sharedNotes}}" wx:key="_id" style="background: {{item.color || '#ffffff'}};">
+          <view class="item-content">
+            <text class="item-title">{{item.title || '无标题'}}</text>
+            <text class="item-text">{{item.content}}</text>
+            <text class="item-group">来自: {{item.groupName}}</text>
+            <text class="item-time">删除时间: {{item.deleteTimeStr}} | {{item.isExpired ? '已过期' : '剩余' + item.remainingDays + '天'}}</text>
+          </view>
+          <view class="item-actions">
+            <text class="restore-btn" bindtap="restoreSharedNote" data-id="{{item._id}}">恢复</text>
+            <text class="delete-btn" bindtap="permanentDeleteSharedNote" data-id="{{item._id}}">彻底删除</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Shared Todos -->
+    <view class="section" wx:if="{{sharedTodos.length > 0}}">
+      <view class="section-title">共享待办 ({{sharedTodos.length}})</view>
+      <view class="item-list">
+        <view class="item todo-item" wx:for="{{sharedTodos}}" wx:key="_id">
+          <view class="item-content">
+            <text class="item-text">{{item.content}}</text>
+            <text class="item-group">来自: {{item.groupName}}</text>
+            <text class="item-time">删除时间: {{item.deleteTimeStr}} | {{item.isExpired ? '已过期' : '剩余' + item.remainingDays + '天'}}</text>
+          </view>
+          <view class="item-actions">
+            <text class="restore-btn" bindtap="restoreSharedTodo" data-id="{{item._id}}">恢复</text>
+            <text class="delete-btn" bindtap="permanentDeleteSharedTodo" data-id="{{item._id}}">彻底删除</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-state" wx:if="{{sharedNotes.length === 0 && sharedTodos.length === 0}}">
+      <image src="/static/icon/empty_fill.png" mode="aspectFit"></image>
+      <text>暂无已删除的共享项目</text>
+    </view>
+  </block>
+
+  <!-- Footer Actions - Personal Tab -->
+  <view class="footer-actions" wx:if="{{activeTab === 'personal' && (personalNotes.length > 0 || personalTodos.length > 0)}}">
+    <view class="footer-row">
+      <button class="btn-clear-expired" bindtap="clearPersonalExpired" disabled="{{clearing}}">{{clearing ? '清理中...' : '清理已过期'}}</button>
+      <button class="btn-clear-all" bindtap="clearAllPersonal" disabled="{{clearing}}">{{clearing ? '清空中...' : '清空个人回收站'}}</button>
+    </view>
+  </view>
+
+  <!-- Footer Actions - Shared Tab -->
+  <view class="footer-actions" wx:if="{{activeTab === 'shared' && (sharedNotes.length > 0 || sharedTodos.length > 0)}}">
+    <view class="footer-row">
+      <button class="btn-clear-expired" bindtap="clearSharedExpired" disabled="{{clearing}}">{{clearing ? '清理中...' : '清理已过期'}}</button>
+      <button class="btn-clear-all" bindtap="clearAllShared" disabled="{{clearing}}">{{clearing ? '清空中...' : '清空共享回收站'}}</button>
+    </view>
+  </view>
+</view>
