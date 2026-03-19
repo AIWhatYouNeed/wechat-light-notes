@@ -8,7 +8,8 @@
     "pages/share/share",
     "pages/groups/groups",
     "pages/groupDetail/groupDetail",
-    "pages/recycleBin/recycleBin"
+    "pages/recycleBin/recycleBin",
+    "pages/webview/webview"
   ],
   "window": {
     "backgroundTextStyle": "light",

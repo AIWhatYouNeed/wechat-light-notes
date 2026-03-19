@@ -354,14 +354,26 @@
   color: #666;
   line-height: 1.6;
   margin-bottom: 16rpx;
+  word-break: break-all;
 }
 
 .note-content.collapsed {
+  max-height: 4.8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.note-text {
+  word-break: break-all;
+}
+
+.note-text.link {
+  color: #576b95;
+  text-decoration: underline;
+  word-break: break-all;
 }
 
 .note-expand {
@@ -499,14 +511,26 @@
   font-size: 30rpx;
   color: #333;
   margin-bottom: 8rpx;
+  word-break: break-all;
 }
 
 .todo-text.collapsed {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  max-height: 2.4em;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.todo-content-text {
+  word-break: break-all;
+}
+
+.todo-content-text.link {
+  color: #576b95;
+  text-decoration: underline;
+  word-break: break-all;
 }
 
 .todo-expand {
@@ -613,6 +637,7 @@
   font-size: 36rpx;
   font-weight: bold;
   border-bottom: 1rpx solid #f0f0f0;
+  word-break: break-all;
 }
 
 .modal-body {
@@ -785,8 +810,8 @@
   font-size: 30rpx;
   color: #333;
   line-height: 1.8;
-  white-space: pre-wrap;
   word-break: break-all;
+  display: block;
 }
 
 .preview-meta {

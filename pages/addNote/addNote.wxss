@@ -82,6 +82,7 @@
   font-weight: bold;
   color: #333;
   margin-bottom: 16rpx;
+  word-break: break-all;
 }
 
 .preview-content {
@@ -89,6 +90,7 @@
   font-size: 28rpx;
   color: #666;
   line-height: 1.6;
+  word-break: break-all;
 }
 
 .footer {

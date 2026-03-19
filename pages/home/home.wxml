@@ -57,7 +57,12 @@
             </view>
             <view class="note-content">
               <text class="note-title">{{item.title || '无标题'}}</text>
-              <text class="note-preview">{{item.content}}</text>
+              <view class="note-preview-wrapper">
+                <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
+                  <text wx:if="{{segment.type === 'text'}}" class="note-preview">{{segment.content}}</text>
+                  <text wx:if="{{segment.type === 'link'}}" class="note-preview link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
+                </block>
+              </view>
               <text class="note-time">{{item.createTime}}</text>
             </view>
             <view class="note-actions" catchtap="stopPropagation" wx:if="{{!notesBatchMode}}">
@@ -110,7 +115,12 @@
               <text wx:if="{{item.completed}}">✓</text>
             </view>
             <view class="todo-info">
-              <text class="todo-text">{{item.content}}</text>
+              <view class="todo-text-wrapper">
+                <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
+                  <text wx:if="{{segment.type === 'text'}}" class="todo-text">{{segment.content}}</text>
+                  <text wx:if="{{segment.type === 'link'}}" class="todo-text link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
+                </block>
+              </view>
               <text class="todo-time">{{item.createTimeStr}}</text>
             </view>
             <text class="todo-delete" bindtap="deleteTodo" data-id="{{item._id}}" wx:if="{{!todosBatchMode}}">删除</text>

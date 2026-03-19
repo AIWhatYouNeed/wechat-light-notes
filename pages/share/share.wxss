@@ -99,6 +99,7 @@
   font-weight: bold;
   color: #333;
   margin-bottom: 16rpx;
+  word-break: break-all;
 }
 
 .note-content {
@@ -107,6 +108,7 @@
   color: #666;
   line-height: 1.6;
   margin-bottom: 20rpx;
+  word-break: break-all;
 }
 
 .note-author-box {

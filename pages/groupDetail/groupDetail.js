@@ -130,7 +130,11 @@ Page({
       },
       success: res => {
         if (res.result && res.result.code === 0) {
-          this.setData({ notes: res.result.data.list || [] });
+          const notes = (res.result.data.list || []).map(note => ({
+            ...note,
+            contentSegments: this.parseSegments(note.content)
+          }));
+          this.setData({ notes });
         }
       }
     });
@@ -297,7 +301,11 @@ Page({
       },
       success: res => {
         if (res.result && res.result.code === 0) {
-          this.setData({ todos: res.result.data.list || [] });
+          const todos = (res.result.data.list || []).map(todo => ({
+            ...todo,
+            contentSegments: this.parseSegments(todo.content)
+          }));
+          this.setData({ todos });
         }
       }
     });
@@ -577,6 +585,64 @@ Page({
       showPreviewModal: true,
       previewData: todo,
       previewType: 'todo'
+    });
+  },
+
+  // Parse text into segments (text and links)
+  parseSegments(text) {
+    if (!text) return [{ type: 'text', content: '' }];
+    
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    const segments = [];
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = urlPattern.exec(text)) !== null) {
+      // Add text before link
+      if (match.index > lastIndex) {
+        segments.push({
+          type: 'text',
+          content: text.substring(lastIndex, match.index)
+        });
+      }
+      // Add link
+      segments.push({
+        type: 'link',
+        content: match[0]
+      });
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < text.length) {
+      segments.push({
+        type: 'text',
+        content: text.substring(lastIndex)
+      });
+    }
+    
+    return segments.length > 0 ? segments : [{ type: 'text', content: text }];
+  },
+
+  // Open link directly
+  openLink(e) {
+    const url = e.currentTarget.dataset.url;
+    if (!url) return;
+    
+    wx.showActionSheet({
+      itemList: ['打开链接', '复制链接'],
+      success: res => {
+        if (res.tapIndex === 0) {
+          wx.navigateTo({
+            url: `/pages/webview/webview?url=${encodeURIComponent(url)}`
+          });
+        } else if (res.tapIndex === 1) {
+          wx.setClipboardData({
+            data: url,
+            success: () => wx.showToast({ title: '已复制' })
+          });
+        }
+      }
     });
   },
 
