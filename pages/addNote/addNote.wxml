@@ -19,7 +19,7 @@
 
   <view class="preview" style="background: {{color}};">
     <text class="preview-title">{{title || '预览标题'}}</text>
-    <text class="preview-content">{{content || '预览内容...'}}</text>
+    <text class="preview-content" user-select>{{content || '预览内容...'}}</text>
   </view>
 </view>
 
