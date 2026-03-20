@@ -1,7 +1,7 @@
 <view class="container">
   <view class="form">
     <input class="title-input" placeholder="标题（可选）" value="{{title}}" bindinput="onTitleInput" />
-    <textarea class="content-input" placeholder="记录你的想法..." value="{{content}}" bindinput="onContentInput" maxlength="2000" />
+    <textarea class="content-input" placeholder="记录你的想法..." model:value="{{content}}" maxlength="2000" />
     <text class="word-count">{{content.length}}/2000</text>
   </view>
 

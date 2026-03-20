@@ -186,7 +186,7 @@
       <view class="note-edit-scroll">
         <view class="note-edit-form">
           <input class="note-edit-title-input" placeholder="标题（可选）" value="{{noteTitle}}" bindinput="onTitleInput" />
-          <textarea class="note-edit-content-input" placeholder="记录你的想法..." value="{{noteContent}}" bindinput="onContentInput" maxlength="2000" />
+          <textarea class="note-edit-content-input" placeholder="记录你的想法..." model:value="{{noteContent}}" maxlength="2000" />
           <text class="note-edit-word-count">{{noteContent.length}}/2000</text>
         </view>
         <view class="note-edit-color-section">
@@ -217,7 +217,7 @@
       <view class="note-edit-scroll">
         <view class="note-edit-form">
           <input class="note-edit-title-input" placeholder="标题（可选）" value="{{noteTitle}}" bindinput="onTitleInput" />
-          <textarea class="note-edit-content-input" placeholder="记录你的想法..." value="{{noteContent}}" bindinput="onContentInput" maxlength="2000" />
+          <textarea class="note-edit-content-input" placeholder="记录你的想法..." model:value="{{noteContent}}" maxlength="2000" />
           <text class="note-edit-word-count">{{noteContent.length}}/2000</text>
         </view>
         <view class="note-edit-color-section">
