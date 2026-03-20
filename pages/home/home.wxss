@@ -362,13 +362,13 @@
   right: 0;
   bottom: 0;
   z-index: 1000;
-  visibility: hidden;
+  display: none;
   opacity: 0;
-  transition: all 0.3s;
+  transition: opacity 0.3s;
 }
 
 .modal.show {
-  visibility: visible;
+  display: flex;
   opacity: 1;
 }
 
@@ -382,18 +382,17 @@
 }
 
 .modal-content {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) scale(0.9);
+  position: relative;
+  margin: auto;
+  transform: scale(0.9);
   width: 80%;
   background: #fff;
   border-radius: 20rpx;
-  transition: all 0.3s;
+  transition: transform 0.3s;
 }
 
 .modal.show .modal-content {
-  transform: translate(-50%, -50%) scale(1);
+  transform: scale(1);
 }
 
 .modal-header {

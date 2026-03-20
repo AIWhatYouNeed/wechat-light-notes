@@ -340,6 +340,9 @@
   border-radius: 16rpx;
   padding: 30rpx;
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 1;
+  background: #fff;
 }
 
 .note-header {
@@ -369,6 +372,8 @@
   line-height: 1.6;
   margin-bottom: 16rpx;
   word-break: break-all;
+  position: relative;
+  z-index: 1;
 }
 
 .note-content.collapsed {
@@ -378,6 +383,14 @@
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  position: relative;
+  z-index: 1;
+}
+
+.note-content-inner {
+  display: block;
+  position: relative;
+  z-index: 1;
 }
 
 .note-text {
@@ -486,6 +499,8 @@
   align-items: center;
   padding: 24rpx 0;
   border-bottom: 1rpx solid #f0f0f0;
+  position: relative;
+  z-index: 1;
 }
 
 .todo-item:last-child {
@@ -535,6 +550,12 @@
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
+}
+
+.todo-content-inner {
+  display: block;
+  position: relative;
+  z-index: 1;
 }
 
 .todo-content-text {
@@ -611,13 +632,13 @@
   right: 0;
   bottom: 0;
   z-index: 1000;
-  visibility: hidden;
+  display: none;
   opacity: 0;
-  transition: all 0.3s;
+  transition: opacity 0.3s;
 }
 
 .modal.show {
-  visibility: visible;
+  display: flex;
   opacity: 1;
 }
 
@@ -631,18 +652,17 @@
 }
 
 .modal-content {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) scale(0.9);
+  position: relative;
+  margin: auto;
+  transform: scale(0.9);
   width: 85%;
   background: #fff;
   border-radius: 20rpx;
-  transition: all 0.3s;
+  transition: transform 0.3s;
 }
 
 .modal.show .modal-content {
-  transform: translate(-50%, -50%) scale(1);
+  transform: scale(1);
 }
 
 .modal-header {
@@ -862,6 +882,14 @@
   max-height: 100vh;
   border-radius: 0;
   margin: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: none;
+}
+
+.modal.show .note-edit-full {
+  transform: none;
 }
 
 .note-edit-container {

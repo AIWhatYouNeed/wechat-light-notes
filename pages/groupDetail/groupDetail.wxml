@@ -80,10 +80,12 @@
             <text class="note-delete" catchtap="deleteNote" data-id="{{item._id}}" wx:if="{{!notesBatchMode}}">删除</text>
           </view>
           <view class="note-content {{item.content.length > 100 ? 'collapsed' : ''}}">
-            <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
-              <text wx:if="{{segment.type === 'text'}}" class="note-text">{{segment.content}}</text>
-              <text wx:if="{{segment.type === 'link'}}" class="note-text link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
-            </block>
+            <view class="note-content-inner">
+              <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
+                <text wx:if="{{segment.type === 'text'}}" class="note-text">{{segment.content}}</text>
+                <text wx:if="{{segment.type === 'link'}}" class="note-text link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
+              </block>
+            </view>
           </view>
           <view class="note-expand" wx:if="{{item.content.length > 100 && !notesBatchMode}}">点击查看详情</view>
           <view class="note-footer">
@@ -140,10 +142,12 @@
           </view>
           <view class="todo-info" bindtap="previewTodo" data-item="{{item}}" wx:if="{{!todosBatchMode}}">
             <view class="todo-text {{item.content.length > 50 ? 'collapsed' : ''}}">
-              <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
-                <text wx:if="{{segment.type === 'text'}}" class="todo-content-text">{{segment.content}}</text>
-                <text wx:if="{{segment.type === 'link'}}" class="todo-content-text link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
-              </block>
+              <view class="todo-content-inner">
+                <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
+                  <text wx:if="{{segment.type === 'text'}}" class="todo-content-text">{{segment.content}}</text>
+                  <text wx:if="{{segment.type === 'link'}}" class="todo-content-text link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
+                </block>
+              </view>
             </view>
             <view class="todo-expand" wx:if="{{item.content.length > 50}}">点击查看详情</view>
             <view class="todo-meta">
