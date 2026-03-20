@@ -42,13 +42,21 @@ Page({
     wx.setStorageSync('userInfo', userInfo);
     
     // Update in cloud
+    console.log('Saving nickname to cloud:', newNickname);
     wx.cloud.callFunction({
       name: 'updateUser',
       data: { nickName: newNickname },
-      success: () => {
-        wx.showToast({ title: '昵称已修改' });
+      success: (res) => {
+        console.log('Update nickname result:', res);
+        if (res.result && res.result.code === 0) {
+          wx.showToast({ title: '昵称已修改' });
+        } else {
+          wx.showToast({ title: '保存失败', icon: 'none' });
+          console.error('Update nickname failed:', res.result);
+        }
       },
       fail: (err) => {
+        wx.showToast({ title: '保存失败', icon: 'none' });
         console.error('Update nickname failed:', err);
       }
     });
@@ -64,8 +72,10 @@ Page({
       content: '确定退出登录吗？',
       success: res => {
         if (res.confirm) {
+          // Only remove local session, keep user data in cloud
           wx.removeStorageSync('userInfo');
           wx.removeStorageSync('sharePassword');
+          // Note: We don't clear isAuthenticated here so user can re-login easily
           wx.showToast({
             title: '已退出',
             success: () => {
@@ -103,23 +113,37 @@ Page({
       filePath: filePath,
       success: res => {
         const fileID = res.fileID;
-        // Update user info locally
-        const userInfo = { ...this.data.userInfo, avatarUrl: fileID };
-        this.setData({ userInfo });
-        wx.setStorageSync('userInfo', userInfo);
         
-        // Update in cloud database
-        wx.cloud.callFunction({
-          name: 'updateUser',
-          data: { avatarUrl: fileID },
-          success: () => {
-            wx.hideLoading();
-            wx.showToast({ title: '头像已更新' });
+        // Get temporary URL for the uploaded file
+        wx.cloud.getTempFileURL({
+          fileList: [fileID],
+          success: urlRes => {
+            const avatarUrl = urlRes.fileList[0].tempFileURL;
+            
+            // Update user info locally
+            const userInfo = { ...this.data.userInfo, avatarUrl: avatarUrl };
+            this.setData({ userInfo });
+            wx.setStorageSync('userInfo', userInfo);
+            
+            // Update in cloud database
+            wx.cloud.callFunction({
+              name: 'updateUser',
+              data: { avatarUrl: avatarUrl },
+              success: () => {
+                wx.hideLoading();
+                wx.showToast({ title: '头像已更新' });
+              },
+              fail: err => {
+                wx.hideLoading();
+                console.error('Update avatar failed:', err);
+                wx.showToast({ title: '头像已更新' });
+              }
+            });
           },
           fail: err => {
             wx.hideLoading();
-            console.error('Update avatar failed:', err);
-            wx.showToast({ title: '头像已更新' });
+            console.error('Get temp file URL failed:', err);
+            wx.showToast({ title: '获取图片链接失败', icon: 'none' });
           }
         });
       },

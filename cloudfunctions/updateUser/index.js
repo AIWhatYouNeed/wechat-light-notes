@@ -12,6 +12,8 @@ exports.main = async (event, context) => {
   const { OPENID } = wxContext;
   const { nickName, avatarUrl } = event || {};
   
+  console.log('updateUser called with:', { nickName, avatarUrl, OPENID });
+  
   if (!OPENID) {
     return { code: -1, message: 'Not logged in', data: null };
   }
@@ -21,6 +23,8 @@ exports.main = async (event, context) => {
     const userRes = await db.collection('users').where({
       _openid: OPENID
     }).get();
+    
+    console.log('User query result:', userRes);
     
     if (userRes.data.length === 0) {
       return { code: -1, message: 'User not found', data: null };
@@ -34,10 +38,14 @@ exports.main = async (event, context) => {
     if (nickName !== undefined) updateData.nickName = nickName;
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
     
+    console.log('Updating user with data:', updateData);
+    
     // Update user info
-    await db.collection('users').doc(userId).update({
+    const updateResult = await db.collection('users').doc(userId).update({
       data: updateData
     });
+    
+    console.log('Update result:', updateResult);
     
     return {
       code: 0,

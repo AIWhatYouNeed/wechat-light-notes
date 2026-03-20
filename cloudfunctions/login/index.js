@@ -43,25 +43,37 @@ exports.main = async (event, context) => {
         avatarUrl: avatarUrl || ''
       };
     } else {
-      // Existing user - update info if provided
+      // Existing user - NEVER update with WeChat info, preserve user's custom settings
       userInfo = userResult.data[0];
+      console.log('Existing user found:', userInfo);
       
-      if (nickName || avatarUrl) {
-        const updateData = {
-          updateTime: now
-        };
-        if (nickName) updateData.nickName = nickName;
-        if (avatarUrl) updateData.avatarUrl = avatarUrl;
-        
-        await db.collection('users').doc(userInfo._id).update({
-          data: updateData
-        });
-        
-        // Update local userInfo
-        if (nickName) userInfo.nickName = nickName;
-        if (avatarUrl) userInfo.avatarUrl = avatarUrl;
-      }
+      // Check current custom settings
+      const hasCustomNickName = userInfo.nickName && userInfo.nickName.trim() !== '';
+      const hasCustomAvatar = userInfo.avatarUrl && userInfo.avatarUrl.trim() !== '';
+      
+      console.log('Current custom nickname:', hasCustomNickName, 'Value:', userInfo.nickName);
+      console.log('Current custom avatar:', hasCustomAvatar, 'Value:', userInfo.avatarUrl);
+      console.log('Ignored WeChat info - nickName:', nickName, 'avatarUrl:', avatarUrl);
+      
+      // IMPORTANT: For existing users, we NEVER update nickname/avatar from WeChat
+      // User must explicitly update their profile in the app
+      // Only update the login timestamp
+      await db.collection('users').doc(userInfo._id).update({
+        data: { updateTime: now }
+      });
+      
+      console.log('User login time updated, profile preserved');
     }
+    
+    // Ensure we return the correct user info fields
+    const returnUserInfo = {
+      _id: userInfo._id,
+      _openid: OPENID,
+      nickName: userInfo.nickName || '',
+      avatarUrl: userInfo.avatarUrl || ''
+    };
+    
+    console.log('Returning user info:', returnUserInfo);
     
     return {
       code: 0,
@@ -70,7 +82,7 @@ exports.main = async (event, context) => {
         openid: OPENID,
         appid: APPID,
         unionid: UNIONID,
-        userInfo: userInfo
+        userInfo: returnUserInfo
       }
     };
   } catch (error) {
