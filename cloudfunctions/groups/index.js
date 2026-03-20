@@ -461,18 +461,43 @@ async function getGroupNotes(data, openid) {
     isDeleted: _.neq(true)
   }).orderBy('createTime', 'desc').get();
 
-  // Convert avatar fileIDs to URLs
+  // Get latest author info and convert avatars
   const notesList = notes.data || [];
+  const authorOpenids = [...new Set(notesList.map(n => n.author).filter(Boolean))];
+  
+  // Fetch latest user info for all authors
+  const userInfoMap = {};
+  if (authorOpenids.length > 0) {
+    const userRes = await db.collection('users').where({
+      _openid: _.in(authorOpenids)
+    }).get();
+    userRes.data.forEach(user => {
+      userInfoMap[user._openid] = {
+        nickName: user.nickName || '用户',
+        avatarUrl: user.avatarUrl || ''
+      };
+    });
+  }
+  
+  // Update notes with latest author info and convert avatars
   const fileIDList = [];
   const noteIndexMap = [];
   
   notesList.forEach((note, index) => {
+    // Use latest user info if available
+    if (note.author && userInfoMap[note.author]) {
+      note.authorName = userInfoMap[note.author].nickName;
+      note.authorAvatar = userInfoMap[note.author].avatarUrl;
+    }
+    
+    // Collect fileIDs for conversion
     if (note.authorAvatar && note.authorAvatar.startsWith('cloud://')) {
       fileIDList.push(note.authorAvatar);
       noteIndexMap.push(index);
     }
   });
   
+  // Convert fileIDs to temp URLs
   if (fileIDList.length > 0) {
     try {
       const tempUrlRes = await cloud.getTempFileURL({
@@ -849,17 +874,42 @@ async function getGroupTodos(data, openid) {
     createTimeStr: formatDateTime(todo.createTime)
   }));
   
-  // Convert avatar fileIDs to URLs
+  // Get latest creator info and convert avatars
+  const creatorOpenids = [...new Set(list.map(t => t.creator).filter(Boolean))];
+  
+  // Fetch latest user info for all creators
+  const userInfoMap = {};
+  if (creatorOpenids.length > 0) {
+    const userRes = await db.collection('users').where({
+      _openid: _.in(creatorOpenids)
+    }).get();
+    userRes.data.forEach(user => {
+      userInfoMap[user._openid] = {
+        nickName: user.nickName || '用户',
+        avatarUrl: user.avatarUrl || ''
+      };
+    });
+  }
+  
+  // Update todos with latest creator info and convert avatars
   const fileIDList = [];
   const todoIndexMap = [];
   
   list.forEach((todo, index) => {
+    // Use latest user info if available
+    if (todo.creator && userInfoMap[todo.creator]) {
+      todo.creatorName = userInfoMap[todo.creator].nickName;
+      todo.creatorAvatar = userInfoMap[todo.creator].avatarUrl;
+    }
+    
+    // Collect fileIDs for conversion
     if (todo.creatorAvatar && todo.creatorAvatar.startsWith('cloud://')) {
       fileIDList.push(todo.creatorAvatar);
       todoIndexMap.push(index);
     }
   });
   
+  // Convert fileIDs to temp URLs
   if (fileIDList.length > 0) {
     try {
       const tempUrlRes = await cloud.getTempFileURL({
