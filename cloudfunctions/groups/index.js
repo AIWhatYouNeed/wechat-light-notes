@@ -253,23 +253,47 @@ async function getGroupDetail(data, openid) {
 
   // Get member details from users collection
   const memberDetails = [];
+  const fileIDList = [];
+  const memberIndexMap = [];
+  
   for (const memberOpenid of group.data.members) {
     const userRes = await db.collection('users').where({
       _openid: memberOpenid
     }).get();
     
     if (userRes.data.length > 0) {
+      const avatarUrl = userRes.data[0].avatarUrl || '';
       memberDetails.push({
         openid: memberOpenid,
         nickName: userRes.data[0].nickName || '用户',
-        avatarUrl: userRes.data[0].avatarUrl || ''
+        avatarUrl: avatarUrl
       });
+      // If avatar is fileID, need to convert to URL
+      if (avatarUrl && avatarUrl.startsWith('cloud://')) {
+        fileIDList.push(avatarUrl);
+        memberIndexMap.push(memberDetails.length - 1);
+      }
     } else {
       memberDetails.push({
         openid: memberOpenid,
         nickName: '用户',
         avatarUrl: ''
       });
+    }
+  }
+  
+  // Convert fileIDs to temp URLs if needed
+  if (fileIDList.length > 0) {
+    try {
+      const tempUrlRes = await cloud.getTempFileURL({
+        fileList: fileIDList
+      });
+      tempUrlRes.fileList.forEach((item, index) => {
+        const memberIndex = memberIndexMap[index];
+        memberDetails[memberIndex].avatarUrl = item.tempFileURL;
+      });
+    } catch (err) {
+      console.error('Get temp file URL failed:', err);
     }
   }
 
@@ -437,11 +461,37 @@ async function getGroupNotes(data, openid) {
     isDeleted: _.neq(true)
   }).orderBy('createTime', 'desc').get();
 
+  // Convert avatar fileIDs to URLs
+  const notesList = notes.data || [];
+  const fileIDList = [];
+  const noteIndexMap = [];
+  
+  notesList.forEach((note, index) => {
+    if (note.authorAvatar && note.authorAvatar.startsWith('cloud://')) {
+      fileIDList.push(note.authorAvatar);
+      noteIndexMap.push(index);
+    }
+  });
+  
+  if (fileIDList.length > 0) {
+    try {
+      const tempUrlRes = await cloud.getTempFileURL({
+        fileList: fileIDList
+      });
+      tempUrlRes.fileList.forEach((item, i) => {
+        const noteIndex = noteIndexMap[i];
+        notesList[noteIndex].authorAvatar = item.tempFileURL;
+      });
+    } catch (err) {
+      console.error('Get temp file URL failed:', err);
+    }
+  }
+
   return {
     code: 0,
     message: 'success',
     data: {
-      list: notes.data || []
+      list: notesList
     }
   };
 }
@@ -798,6 +848,31 @@ async function getGroupTodos(data, openid) {
     ...todo,
     createTimeStr: formatDateTime(todo.createTime)
   }));
+  
+  // Convert avatar fileIDs to URLs
+  const fileIDList = [];
+  const todoIndexMap = [];
+  
+  list.forEach((todo, index) => {
+    if (todo.creatorAvatar && todo.creatorAvatar.startsWith('cloud://')) {
+      fileIDList.push(todo.creatorAvatar);
+      todoIndexMap.push(index);
+    }
+  });
+  
+  if (fileIDList.length > 0) {
+    try {
+      const tempUrlRes = await cloud.getTempFileURL({
+        fileList: fileIDList
+      });
+      tempUrlRes.fileList.forEach((item, i) => {
+        const todoIndex = todoIndexMap[i];
+        list[todoIndex].creatorAvatar = item.tempFileURL;
+      });
+    } catch (err) {
+      console.error('Get temp file URL failed:', err);
+    }
+  }
 
   return { code: 0, message: 'success', data: { list } };
 }
