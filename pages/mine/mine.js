@@ -8,6 +8,27 @@ Page({
   onLoad() {
     const userInfo = wx.getStorageSync('userInfo');
     this.setData({ userInfo });
+    
+    // Convert avatar fileID to URL if needed
+    if (userInfo && userInfo.avatarUrl && userInfo.avatarUrl.startsWith('cloud://')) {
+      this.convertAvatarToUrl(userInfo.avatarUrl);
+    }
+  },
+
+  // Convert cloud fileID to temporary URL
+  convertAvatarToUrl(fileID) {
+    wx.cloud.getTempFileURL({
+      fileList: [fileID],
+      success: res => {
+        const tempUrl = res.fileList[0].tempFileURL;
+        const userInfo = { ...this.data.userInfo, avatarUrl: tempUrl };
+        this.setData({ userInfo });
+        // Note: we don't save temp URL to storage, keep fileID there
+      },
+      fail: err => {
+        console.error('Convert avatar to URL failed:', err);
+      }
+    });
   },
 
   editNickname() {
@@ -114,36 +135,37 @@ Page({
       success: res => {
         const fileID = res.fileID;
         
-        // Get temporary URL for the uploaded file
+        // Save fileID to database (permanent), not temp URL
+        // Update local storage with fileID
+        const userInfoWithFileID = { ...this.data.userInfo, avatarUrl: fileID };
+        wx.setStorageSync('userInfo', userInfoWithFileID);
+        
+        // Convert to temp URL for immediate display
         wx.cloud.getTempFileURL({
           fileList: [fileID],
           success: urlRes => {
-            const avatarUrl = urlRes.fileList[0].tempFileURL;
-            
-            // Update user info locally
-            const userInfo = { ...this.data.userInfo, avatarUrl: avatarUrl };
-            this.setData({ userInfo });
-            wx.setStorageSync('userInfo', userInfo);
-            
-            // Update in cloud database
-            wx.cloud.callFunction({
-              name: 'updateUser',
-              data: { avatarUrl: avatarUrl },
-              success: () => {
-                wx.hideLoading();
-                wx.showToast({ title: '头像已更新' });
-              },
-              fail: err => {
-                wx.hideLoading();
-                console.error('Update avatar failed:', err);
-                wx.showToast({ title: '头像已更新' });
-              }
-            });
+            const tempUrl = urlRes.fileList[0].tempFileURL;
+            const userInfoWithUrl = { ...this.data.userInfo, avatarUrl: tempUrl };
+            this.setData({ userInfo: userInfoWithUrl });
+            wx.hideLoading();
+            wx.showToast({ title: '头像已更新' });
           },
           fail: err => {
             wx.hideLoading();
-            console.error('Get temp file URL failed:', err);
-            wx.showToast({ title: '获取图片链接失败', icon: 'none' });
+            console.error('Get temp URL failed:', err);
+            wx.showToast({ title: '头像已更新' });
+          }
+        });
+        
+        // Update in cloud database - save fileID (permanent)
+        wx.cloud.callFunction({
+          name: 'updateUser',
+          data: { avatarUrl: fileID },
+          success: () => {
+            console.log('Avatar fileID saved to database');
+          },
+          fail: err => {
+            console.error('Update avatar failed:', err);
           }
         });
       },

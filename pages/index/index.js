@@ -89,7 +89,7 @@ Page({
           
           // Use cloud stored user info if available, otherwise use WeChat info
           const finalNickName = hasCloudNickName ? cloudUserInfo.nickName : (userInfo.nickName || '用户');
-          const finalAvatarUrl = hasCloudAvatar ? cloudUserInfo.avatarUrl : (userInfo.avatarUrl || '/static/icon/headPortrait.png');
+          let finalAvatarUrl = hasCloudAvatar ? cloudUserInfo.avatarUrl : (userInfo.avatarUrl || '/static/icon/headPortrait.png');
           
           const fullUserInfo = {
             ...userInfo,
@@ -99,6 +99,23 @@ Page({
           };
           console.log('Final user info to save:', fullUserInfo);
           wx.setStorageSync('userInfo', fullUserInfo);
+          
+          // If avatar is fileID, convert to URL for display
+          if (finalAvatarUrl && finalAvatarUrl.startsWith('cloud://')) {
+            console.log('Converting avatar fileID to URL:', finalAvatarUrl);
+            wx.cloud.getTempFileURL({
+              fileList: [finalAvatarUrl],
+              success: urlRes => {
+                const tempUrl = urlRes.fileList[0].tempFileURL;
+                fullUserInfo.avatarUrl = tempUrl;
+                wx.setStorageSync('userInfo', fullUserInfo);
+                console.log('Avatar URL converted:', tempUrl);
+              },
+              fail: err => {
+                console.error('Convert avatar failed:', err);
+              }
+            });
+          }
           
           wx.hideLoading();
           wx.showToast({ 
