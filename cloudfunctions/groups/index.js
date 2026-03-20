@@ -56,6 +56,8 @@ exports.main = async (event, context) => {
         return await rejoinGroup(data, openid);
       case 'delete':
         return await deleteGroup(data, openid);
+      case 'updateGroup':
+        return await updateGroupInfo(data, openid);
       case 'addTodo':
         return await addGroupTodo(data, openid);
       case 'getTodos':
@@ -738,6 +740,48 @@ async function rejoinGroup(data, openid) {
       id: groupId,
       name: group.data.name,
       code: group.data.code
+    }
+  };
+}
+
+// Update group info (only creator can update)
+async function updateGroupInfo(data, openid) {
+  const { groupId, name } = data || {};
+  
+  if (!groupId) {
+    return { code: -1, message: 'Group ID is required', data: null };
+  }
+  
+  if (!name || !name.trim()) {
+    return { code: -1, message: 'Group name is required', data: null };
+  }
+
+  // Get group info
+  const group = await db.collection('groups').doc(groupId).get();
+  
+  if (!group.data) {
+    return { code: -1, message: 'Group not found', data: null };
+  }
+
+  // Check if user is creator
+  if (group.data.creator !== openid) {
+    return { code: -1, message: 'Only creator can update group', data: null };
+  }
+
+  // Update group name
+  await db.collection('groups').doc(groupId).update({
+    data: {
+      name: name.trim(),
+      updateTime: new Date()
+    }
+  });
+
+  return {
+    code: 0,
+    message: 'success',
+    data: {
+      id: groupId,
+      name: name.trim()
     }
   };
 }

@@ -1,7 +1,10 @@
 <view class="container">
   <!-- Group Info -->
   <view class="group-header" wx:if="{{groupInfo}}">
-    <view class="group-title">{{groupInfo.name}}</view>
+    <view class="group-title-row">
+      <view class="group-title">{{groupInfo.name}}</view>
+      <text class="edit-group-name" wx:if="{{isCreator}}" bindtap="showEditGroupName">编辑</text>
+    </view>
     <view class="group-meta">
       <text>分享码：{{groupInfo.code}}</text>
       <text bindtap="toggleMembers">{{groupInfo.members.length}} 人 ></text>
@@ -292,6 +295,21 @@
     </view>
     <view class="modal-footer">
       <button class="btn-confirm" bindtap="closeHistoryModal">关闭</button>
+    </view>
+  </view>
+</view>
+
+<!-- Edit Group Name Modal -->
+<view class="modal {{showEditGroupModal ? 'show' : ''}}">
+  <view class="modal-mask" bindtap="closeEditGroupModal"></view>
+  <view class="modal-content">
+    <view class="modal-header">修改组名</view>
+    <view class="modal-body">
+      <input type="text" placeholder="请输入组名" value="{{newGroupName}}" bindinput="onGroupNameInput" maxlength="20" />
+    </view>
+    <view class="modal-footer">
+      <button class="btn-cancel" bindtap="closeEditGroupModal">取消</button>
+      <button class="btn-confirm" bindtap="updateGroupName">保存</button>
     </view>
   </view>
 </view>

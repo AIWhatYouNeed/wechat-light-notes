@@ -569,6 +569,57 @@ Page({
     });
   },
 
+  // Edit Group Name
+  showEditGroupName() {
+    this.setData({
+      showEditGroupModal: true,
+      newGroupName: this.data.groupInfo.name || ''
+    });
+  },
+
+  closeEditGroupModal() {
+    this.setData({
+      showEditGroupModal: false,
+      newGroupName: ''
+    });
+  },
+
+  onGroupNameInput(e) {
+    this.setData({ newGroupName: e.detail.value });
+  },
+
+  updateGroupName() {
+    const name = this.data.newGroupName.trim();
+    if (!name) {
+      wx.showToast({ title: '请输入组名', icon: 'none' });
+      return;
+    }
+    wx.cloud.callFunction({
+      name: 'groups',
+      data: {
+        action: 'updateGroup',
+        data: {
+          groupId: this.data.groupId,
+          name: name
+        }
+      },
+      success: res => {
+        if (res.result && res.result.code === 0) {
+          wx.showToast({ title: '修改成功' });
+          this.setData({
+            showEditGroupModal: false,
+            'groupInfo.name': name
+          });
+        } else {
+          wx.showToast({ title: res.result.message || '修改失败', icon: 'none' });
+        }
+      },
+      fail: () => {
+        wx.showToast({ title: '修改失败', icon: 'none' });
+      }
+    });
+  },
+
   // Preview
   previewNote(e) {
     const note = e.currentTarget.dataset.note;
