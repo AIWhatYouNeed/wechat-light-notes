@@ -83,6 +83,7 @@ Page({
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&amp;/g, '&')
+      .replace(/&nbsp;/g, ' ')
       .trim();
   },
 

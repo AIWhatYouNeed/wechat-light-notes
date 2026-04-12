@@ -18,7 +18,9 @@ Page({
     notesBatchMode: false,
     todosBatchMode: false,
     selectedNotes: [],
-    selectedTodos: []
+    selectedTodos: [],
+    showPreviewModal: false,
+    previewNote: {}
   },
 
   onLoad() {
@@ -205,6 +207,142 @@ Page({
   onEditNote(e) {
     const id = e.currentTarget.dataset.id;
     wx.navigateTo({ url: `/pages/addNote/addNote?id=${id}` });
+  },
+
+  // Preview note in modal
+  previewNote(e) {
+    const note = e.currentTarget.dataset.note;
+    const parsedContent = this.parseContent(note.content);
+    
+    // Find all cloud fileIDs in the content
+    const cloudFileIDs = parsedContent
+      .filter(seg => seg.type === 'image' && seg.src && seg.src.startsWith('cloud://'))
+      .map(seg => seg.src);
+    
+    // If there are cloud images, pre-convert them to temp URLs
+    if (cloudFileIDs.length > 0) {
+      wx.cloud.getTempFileURL({
+        fileList: cloudFileIDs,
+        success: res => {
+          const urlMap = {};
+          res.fileList.forEach(item => {
+            urlMap[item.fileID] = item.tempFileURL;
+          });
+          
+          // Replace cloud fileIDs with temp URLs
+          const updatedContent = parsedContent.map(seg => {
+            if (seg.type === 'image' && seg.src && seg.src.startsWith('cloud://') && urlMap[seg.src]) {
+              return { ...seg, src: urlMap[seg.src] };
+            }
+            return seg;
+          });
+          
+          this.setData({
+            showPreviewModal: true,
+            previewNote: {
+              ...note,
+              parsedContent: updatedContent
+            }
+          });
+        },
+        fail: () => {
+          // Fallback: show modal without pre-conversion
+          this.setData({
+            showPreviewModal: true,
+            previewNote: {
+              ...note,
+              parsedContent: parsedContent
+            }
+          });
+        }
+      });
+    } else {
+      // No cloud images, show modal immediately
+      this.setData({
+        showPreviewModal: true,
+        previewNote: {
+          ...note,
+          parsedContent: parsedContent
+        }
+      });
+    }
+  },
+
+  // Close preview modal
+  closePreviewModal() {
+    this.setData({
+      showPreviewModal: false,
+      previewNote: {}
+    });
+  },
+
+  // Edit from preview modal
+  editFromPreview() {
+    const id = this.data.previewNote._id;
+    this.closePreviewModal();
+    wx.navigateTo({ url: `/pages/addNote/addNote?id=${id}` });
+  },
+
+  // Handle image error in preview
+  onPreviewImageError(e) {
+    const { src } = e.currentTarget.dataset;
+    if (src && src.startsWith('cloud://')) {
+      wx.cloud.getTempFileURL({
+        fileList: [src],
+        success: res => {
+          const tempUrl = res.fileList[0].tempFileURL;
+          // Update the specific image in preview
+          const parsedContent = this.data.previewNote.parsedContent.map(seg => {
+            if (seg.type === 'image' && seg.src === src) {
+              return { ...seg, src: tempUrl };
+            }
+            return seg;
+          });
+          this.setData({
+            'previewNote.parsedContent': parsedContent
+          });
+        }
+      });
+    }
+  },
+
+  // Preview image in full screen
+  previewImage(e) {
+    const { src } = e.currentTarget.dataset;
+    if (!src) return;
+    
+    // Get all images in the preview content
+    const allImages = this.data.previewNote.parsedContent
+      .filter(seg => seg.type === 'image')
+      .map(seg => seg.src);
+    
+    // Get temp URLs for all images
+    if (allImages.length > 0) {
+      wx.cloud.getTempFileURL({
+        fileList: allImages,
+        success: res => {
+          const urls = res.fileList.map(f => f.tempFileURL);
+          const currentUrl = res.fileList.find(f => f.fileID === src)?.tempFileURL || src;
+          
+          wx.previewImage({
+            current: currentUrl,
+            urls: urls
+          });
+        },
+        fail: () => {
+          // Fallback: preview single image
+          wx.previewImage({
+            current: src,
+            urls: [src]
+          });
+        }
+      });
+    } else {
+      wx.previewImage({
+        current: src,
+        urls: [src]
+      });
+    }
   },
 
   onDeleteNote(e) {
@@ -856,5 +994,154 @@ Page({
       }
       return todo;
     });
+  },
+
+  // Parse content into segments for preview (Full Markdown support)
+  parseContent(text) {
+    if (!text) return [{ type: 'text', content: '' }];
+    
+    const segments = [];
+    const lines = text.split('\n');
+    let currentParagraph = null;
+    
+    const flushParagraph = () => {
+      if (currentParagraph) {
+        segments.push({
+          type: 'paragraph',
+          content: currentParagraph
+        });
+        currentParagraph = null;
+      }
+    };
+    
+    lines.forEach((line) => {
+      // Handle empty lines - flush current paragraph and add break
+      if (!line.trim()) {
+        flushParagraph();
+        segments.push({ type: 'br' });
+        return;
+      }
+      
+      // Check for headings (# ## ###)
+      const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
+      if (headingMatch) {
+        flushParagraph();
+        const level = headingMatch[1].length;
+        segments.push({
+          type: 'heading',
+          level: level,
+          content: this.parseInlineStyles(headingMatch[2])
+        });
+        return;
+      }
+      
+      // Check for unordered list items (- or *)
+      const listMatch = line.match(/^[\-\*]\s+(.+)$/);
+      if (listMatch) {
+        flushParagraph();
+        segments.push({
+          type: 'list-item',
+          listType: 'unordered',
+          content: this.parseInlineStyles(listMatch[1])
+        });
+        return;
+      }
+      
+      // Check for ordered list items (1. 2. etc)
+      const orderedListMatch = line.match(/^(\d+)\.\s+(.+)$/);
+      if (orderedListMatch) {
+        flushParagraph();
+        segments.push({
+          type: 'list-item',
+          listType: 'ordered',
+          number: orderedListMatch[1],
+          content: this.parseInlineStyles(orderedListMatch[2])
+        });
+        return;
+      }
+      
+      // Regular text - add to current paragraph or start new one
+      const parsedLine = this.parseInlineStyles(line);
+      if (!currentParagraph) {
+        currentParagraph = parsedLine;
+      } else {
+        // Merge with existing paragraph (add space between lines)
+        currentParagraph = [...currentParagraph, { type: 'text', content: ' ' }, ...parsedLine];
+      }
+    });
+    
+    // Don't forget the last paragraph
+    flushParagraph();
+    
+    return segments;
+  },
+
+  // Parse inline styles (bold, italic, code, links, images)
+  parseInlineStyles(text) {
+    const segments = [];
+    let remaining = text;
+    
+    // Patterns for inline elements (order matters - check longer patterns first)
+    const patterns = [
+      { type: 'image', regex: /!\[([^\]]*)\]\(([^)]+)\)/ },
+      { type: 'bold', regex: /\*\*([^*]+)\*\*/ },
+      { type: 'italic', regex: /\*([^*]+)\*/ },
+      { type: 'code', regex: /`([^`]+)`/ },
+      { type: 'link', regex: /(https?:\/\/[^\s]+)/ }
+    ];
+    
+    while (remaining.length > 0) {
+      let found = false;
+      
+      // Find the earliest match among all patterns
+      let earliestMatch = null;
+      let earliestPattern = null;
+      
+      for (const pattern of patterns) {
+        const match = remaining.match(pattern.regex);
+        if (match && (!earliestMatch || match.index < earliestMatch.index)) {
+          earliestMatch = match;
+          earliestPattern = pattern;
+        }
+      }
+      
+      if (earliestMatch && earliestMatch.index !== undefined) {
+        // Add text before the match
+        if (earliestMatch.index > 0) {
+          segments.push({ type: 'text', content: remaining.substring(0, earliestMatch.index) });
+        }
+        
+        // Add the matched element
+        if (earliestPattern.type === 'image') {
+          segments.push({
+            type: 'image',
+            alt: earliestMatch[1],
+            src: earliestMatch[2]
+          });
+        } else if (earliestPattern.type === 'link') {
+          segments.push({
+            type: 'link',
+            content: earliestMatch[0]
+          });
+        } else {
+          segments.push({
+            type: earliestPattern.type,
+            content: earliestMatch[1]
+          });
+        }
+        
+        // Update remaining text
+        remaining = remaining.substring(earliestMatch.index + earliestMatch[0].length);
+        found = true;
+      } else {
+        // No more matches, add remaining as plain text
+        if (remaining) {
+          segments.push({ type: 'text', content: remaining });
+        }
+        break;
+      }
+    }
+    
+    return segments.length > 0 ? segments : [{ type: 'text', content: text }];
   }
 });

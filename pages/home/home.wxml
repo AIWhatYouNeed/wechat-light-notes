@@ -49,7 +49,7 @@
       </view>
       <block wx:if="{{!notesCollapsed && notes.length > 0}}">
         <view class="note-list">
-          <view wx:for="{{notes}}" wx:key="_id" class="note-item {{notesBatchMode ? 'batch-item' : ''}} {{item.selected ? 'selected' : ''}}" bindtap="{{notesBatchMode ? 'toggleNoteSelect' : 'onEditNote'}}" data-id="{{item._id}}">
+          <view wx:for="{{notes}}" wx:key="_id" class="note-item {{notesBatchMode ? 'batch-item' : ''}} {{item.selected ? 'selected' : ''}}" bindtap="{{notesBatchMode ? 'toggleNoteSelect' : 'previewNote'}}" data-note="{{item}}" data-id="{{item._id}}">
             <view class="batch-checkbox" wx:if="{{notesBatchMode}}">
               <view class="checkbox {{item.selected ? 'checked' : ''}}">
                 <text wx:if="{{item.selected}}">✓</text>
@@ -57,13 +57,15 @@
             </view>
             <view class="note-content">
               <text class="note-title">{{item.title || '无标题'}}</text>
-              <view class="note-preview-wrapper">
-                <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
-                  <text wx:if="{{segment.type === 'text'}}" class="note-preview">{{segment.content}}</text>
-                  <text wx:if="{{segment.type === 'link'}}" class="note-preview link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
-                  <image wx:if="{{segment.type === 'image'}}" class="note-image" src="{{segment.src}}" mode="aspectFill" binderror="onImageError" data-index="{{index}}" data-note-id="{{item._id}}"></image>
-                </block>
+              <view class="note-preview-wrapper {{item.content.length > 100 ? 'collapsed' : ''}}">
+                <view class="note-preview-inner">
+                  <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
+                    <text wx:if="{{segment.type === 'text'}}" class="note-preview">{{segment.content}}</text>
+                    <text wx:if="{{segment.type === 'link'}}" class="note-preview link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
+                  </block>
+                </view>
               </view>
+              <view class="note-expand-hint" wx:if="{{item.content.length > 100}}">点击查看详情</view>
               <text class="note-time">{{item.createTime}}</text>
             </view>
             <view class="note-actions" catchtap="stopPropagation" wx:if="{{!notesBatchMode}}">
@@ -160,6 +162,66 @@
     <view class="modal-footer">
       <button class="btn-cancel" bindtap="closeTodoEditModal">取消</button>
       <button class="btn-confirm" bindtap="confirmEditTodo">确定</button>
+    </view>
+  </view>
+</view>
+
+<!-- Note Preview Modal -->
+<view class="modal {{showPreviewModal ? 'show' : ''}}">
+  <view class="modal-mask" bindtap="closePreviewModal"></view>
+  <view class="modal-content preview-modal">
+    <view class="modal-header">{{previewNote.title || '无标题'}}</view>
+    <view class="modal-body preview-body">
+      <scroll-view scroll-y class="preview-scroll">
+        <view class="preview-content-full">
+          <block wx:for="{{previewNote.parsedContent}}" wx:for-item="segment" wx:key="index">
+            <!-- Line breaks -->
+            <view wx:if="{{segment.type === 'br'}}" class="preview-br"></view>
+            
+            <!-- Headings -->
+            <view wx:if="{{segment.type === 'heading'}}" class="preview-heading preview-heading-{{segment.level}}">
+              <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+                <text wx:if="{{inline.type === 'text'}}" class="preview-heading-text">{{inline.content}}</text>
+                <text wx:if="{{inline.type === 'bold'}}" class="preview-bold preview-heading-text">{{inline.content}}</text>
+                <text wx:if="{{inline.type === 'italic'}}" class="preview-italic preview-heading-text">{{inline.content}}</text>
+                <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+                <text wx:if="{{inline.type === 'link'}}" class="preview-link preview-heading-text" bindtap="openLink" data-url="{{inline.content}}">{{inline.content}}</text>
+              </block>
+            </view>
+            
+            <!-- List items -->
+            <view wx:if="{{segment.type === 'list-item'}}" class="preview-list-item">
+              <text wx:if="{{segment.listType === 'unordered'}}" class="preview-bullet">• </text>
+              <text wx:if="{{segment.listType === 'ordered'}}" class="preview-number">{{segment.number}}. </text>
+              <view class="preview-list-content">
+                <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+                  <text wx:if="{{inline.type === 'text'}}" class="preview-list-text">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'bold'}}" class="preview-bold preview-list-text">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'italic'}}" class="preview-italic preview-list-text">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'link'}}" class="preview-link preview-list-text" bindtap="openLink" data-url="{{inline.content}}">{{inline.content}}</text>
+                </block>
+              </view>
+            </view>
+            
+            <!-- Paragraphs -->
+            <view wx:if="{{segment.type === 'paragraph'}}" class="preview-paragraph">
+              <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+                <text wx:if="{{inline.type === 'text'}}" class="preview-segment-text">{{inline.content}}</text>
+                <text wx:if="{{inline.type === 'bold'}}" class="preview-bold">{{inline.content}}</text>
+                <text wx:if="{{inline.type === 'italic'}}" class="preview-italic">{{inline.content}}</text>
+                <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+                <text wx:if="{{inline.type === 'link'}}" class="preview-segment-link" bindtap="openLink" data-url="{{inline.content}}">{{inline.content}}</text>
+                <image wx:if="{{inline.type === 'image'}}" class="preview-segment-image" src="{{inline.src}}" mode="aspectFill" binderror="onPreviewImageError" bindtap="previewImage" data-src="{{inline.src}}"></image>
+              </block>
+            </view>
+          </block>
+        </view>
+      </scroll-view>
+    </view>
+    <view class="modal-footer">
+      <button class="btn-cancel" bindtap="closePreviewModal">关闭</button>
+      <button class="btn-confirm" bindtap="editFromPreview">编辑</button>
     </view>
   </view>
 </view>
