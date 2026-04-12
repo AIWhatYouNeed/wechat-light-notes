@@ -321,7 +321,25 @@ Page({
       wx.showToast({ title: '请输入待办内容', icon: 'none' });
       return;
     }
-
+    
+    // Create temp todo for immediate UI update
+    const tempId = 'temp_' + Date.now();
+    const now = new Date();
+    const tempTodo = {
+      _id: tempId,
+      content: content,
+      completed: false,
+      createTime: now,
+      createTimeStr: this.formatDateTime(now),
+      creatorName: this.data.userInfo.nickName || '我',
+      isTemp: true
+    };
+    
+    // Add to local state immediately
+    const todos = [tempTodo, ...this.data.todos];
+    this.setData({ todos, newTodo: '' });
+    
+    // Sync with server in background
     wx.cloud.callFunction({
       name: 'groups',
       data: {
@@ -330,27 +348,48 @@ Page({
       },
       success: res => {
         if (res.result && res.result.code === 0) {
-          this.setData({ newTodo: '' });
+          // Replace temp todo with real one from server
           this.loadGroupTodos();
         } else {
           wx.showToast({ title: res.result.message || '添加失败', icon: 'none' });
+          // Remove temp todo on failure
+          const todos = this.data.todos.filter(t => t._id !== tempId);
+          this.setData({ todos });
         }
+      },
+      fail: () => {
+        // Remove temp todo on failure
+        const todos = this.data.todos.filter(t => t._id !== tempId);
+        this.setData({ todos });
+        wx.showToast({ title: '添加失败', icon: 'none' });
       }
     });
   },
 
   toggleTodo(e) {
     const item = e.currentTarget.dataset.item;
+    const newCompleted = !item.completed;
+    
+    // Update local state immediately for better UX
+    const todos = this.data.todos.map(todo => {
+      if (todo._id === item._id) {
+        return { ...todo, completed: newCompleted };
+      }
+      return todo;
+    });
+    this.setData({ todos });
+    
+    // Sync with server in background
     wx.cloud.callFunction({
       name: 'groups',
       data: {
         action: 'toggleTodo',
-        data: { id: item._id, completed: !item.completed }
+        data: { id: item._id, completed: newCompleted }
       },
-      success: res => {
-        if (res.result && res.result.code === 0) {
-          this.loadGroupTodos();
-        }
+      fail: () => {
+        // Revert on failure
+        wx.showToast({ title: '更新失败', icon: 'none' });
+        this.loadGroupTodos();
       }
     });
   },
@@ -404,19 +443,21 @@ Page({
       content: '确定删除这条待办吗？',
       success: res => {
         if (res.confirm) {
+          // Remove from local state immediately
+          const todos = this.data.todos.filter(item => item._id !== id);
+          this.setData({ todos });
+          wx.showToast({ title: '删除成功' });
+          
+          // Sync with server in background
           wx.cloud.callFunction({
             name: 'groups',
             data: {
               action: 'deleteTodo',
               data: { id }
             },
-            success: res => {
-              if (res.result && res.result.code === 0) {
-                wx.showToast({ title: '删除成功' });
-                this.loadGroupTodos();
-              } else {
-                wx.showToast({ title: res.result.message || '删除失败', icon: 'none' });
-              }
+            fail: () => {
+              wx.showToast({ title: '删除失败', icon: 'none' });
+              this.loadGroupTodos();
             }
           });
         }
@@ -511,7 +552,7 @@ Page({
   },
 
   batchDeleteTodos() {
-    const { selectedTodos } = this.data;
+    const { selectedTodos, todos } = this.data;
     if (selectedTodos.length === 0) {
       wx.showToast({ title: '请先选择', icon: 'none' });
       return;
@@ -521,13 +562,19 @@ Page({
       content: `确定删除选中的 ${selectedTodos.length} 项吗？`,
       success: res => {
         if (res.confirm) {
+          // Remove selected items from local state immediately
+          const remainingTodos = todos.filter(item => !selectedTodos.includes(item._id));
+          this.setData({ todos: remainingTodos });
+          wx.showToast({ title: '删除成功' });
+          this.exitTodosBatchMode();
+          
+          // Sync with server in background
           const tasks = selectedTodos.map(id => wx.cloud.callFunction({
             name: 'groups',
             data: { action: 'deleteTodo', data: { id } }
           }));
-          Promise.all(tasks).then(() => {
-            wx.showToast({ title: '删除成功' });
-            this.exitTodosBatchMode();
+          Promise.all(tasks).catch(() => {
+            wx.showToast({ title: '部分删除失败', icon: 'none' });
             this.loadGroupTodos();
           });
         }
@@ -791,5 +838,15 @@ Page({
         }
       }
     });
+  },
+
+  // Helper function to format date time
+  formatDateTime(date) {
+    const chinaTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+    const month = (chinaTime.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = chinaTime.getUTCDate().toString().padStart(2, '0');
+    const hours = chinaTime.getUTCHours().toString().padStart(2, '0');
+    const minutes = chinaTime.getUTCMinutes().toString().padStart(2, '0');
+    return `${month}-${day} ${hours}:${minutes}`;
   }
 });

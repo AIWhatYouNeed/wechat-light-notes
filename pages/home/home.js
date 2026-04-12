@@ -154,17 +154,19 @@ Page({
       content: '确定删除这条小记吗？',
       success: res => {
         if (res.confirm) {
+          // Remove from local state immediately
+          const notes = this.data.notes.filter(item => item._id !== id);
+          this.setData({ notes });
+          wx.showToast({ title: '删除成功' });
+          
+          // Sync with server in background
           wx.cloud.callFunction({
             name: 'notes',
             data: { action: 'delete', data: { id } },
-            success: (res) => {
-              console.log('Delete note response:', res);
-              wx.showToast({ title: '删除成功' });
-              this.loadNotes();
-            },
             fail: (err) => {
               console.error('Delete note failed:', err);
               wx.showToast({ title: '删除失败', icon: 'none' });
+              this.loadNotes();
             }
           });
         }
@@ -175,13 +177,28 @@ Page({
   toggleTodo(e) {
     const item = e.currentTarget.dataset.item;
     const newCompleted = !item.completed;
+    
+    // Update local state immediately for better UX
+    const todos = this.data.todos.map(todo => {
+      if (todo._id === item._id) {
+        return { ...todo, completed: newCompleted };
+      }
+      return todo;
+    });
+    this.setData({ todos });
+    
+    // Sync with server in background
     wx.cloud.callFunction({
       name: 'todos',
       data: {
         action: 'update',
         data: { id: item._id, completed: newCompleted }
       },
-      success: () => this.loadTodos()
+      fail: () => {
+        // Revert on failure
+        wx.showToast({ title: '更新失败', icon: 'none' });
+        this.loadTodos();
+      }
     });
   },
 
@@ -195,6 +212,24 @@ Page({
       wx.showToast({ title: '请输入待办内容', icon: 'none' });
       return;
     }
+    
+    // Create temp todo for immediate UI update
+    const tempId = 'temp_' + Date.now();
+    const now = new Date();
+    const tempTodo = {
+      _id: tempId,
+      content: content,
+      completed: false,
+      createTime: now,
+      createTimeStr: this.formatDateTime(now),
+      isTemp: true
+    };
+    
+    // Add to local state immediately
+    const todos = [tempTodo, ...this.data.todos];
+    this.setData({ todos, newTodo: '' });
+    
+    // Sync with server in background
     wx.cloud.callFunction({
       name: 'todos',
       data: {
@@ -203,9 +238,15 @@ Page({
       },
       success: res => {
         if (res.result && res.result.code === 0) {
-          this.setData({ newTodo: '' });
+          // Replace temp todo with real one from server
           this.loadTodos();
         }
+      },
+      fail: () => {
+        // Remove temp todo on failure
+        const todos = this.data.todos.filter(t => t._id !== tempId);
+        this.setData({ todos });
+        wx.showToast({ title: '添加失败', icon: 'none' });
       }
     });
   },
@@ -408,7 +449,15 @@ Page({
   },
 
   performNotesBatchDelete() {
-    const { selectedNotes } = this.data;
+    const { selectedNotes, notes } = this.data;
+    
+    // Remove selected items from local state immediately
+    const remainingNotes = notes.filter(item => !selectedNotes.includes(item._id));
+    this.setData({ notes: remainingNotes });
+    wx.showToast({ title: '删除成功' });
+    this.exitNotesBatchMode();
+    
+    // Sync with server in background
     const deletePromises = selectedNotes.map(id => {
       return wx.cloud.callFunction({
         name: 'notes',
@@ -419,12 +468,9 @@ Page({
       });
     });
 
-    Promise.all(deletePromises).then(() => {
-      wx.showToast({ title: '删除成功' });
-      this.exitNotesBatchMode();
+    Promise.all(deletePromises).catch(() => {
+      wx.showToast({ title: '部分删除失败', icon: 'none' });
       this.loadNotes();
-    }).catch(() => {
-      wx.showToast({ title: '删除失败', icon: 'none' });
     });
   },
 
@@ -482,7 +528,15 @@ Page({
   },
 
   performTodosBatchDelete() {
-    const { selectedTodos } = this.data;
+    const { selectedTodos, todos } = this.data;
+    
+    // Remove selected items from local state immediately
+    const remainingTodos = todos.filter(item => !selectedTodos.includes(item._id));
+    this.setData({ todos: remainingTodos });
+    wx.showToast({ title: '删除成功' });
+    this.exitTodosBatchMode();
+    
+    // Sync with server in background
     const deletePromises = selectedTodos.map(id => {
       return wx.cloud.callFunction({
         name: 'todos',
@@ -493,12 +547,9 @@ Page({
       });
     });
 
-    Promise.all(deletePromises).then(() => {
-      wx.showToast({ title: '删除成功' });
-      this.exitTodosBatchMode();
+    Promise.all(deletePromises).catch(() => {
+      wx.showToast({ title: '部分删除失败', icon: 'none' });
       this.loadTodos();
-    }).catch(() => {
-      wx.showToast({ title: '删除失败', icon: 'none' });
     });
   },
 
@@ -513,11 +564,17 @@ Page({
       content: '确定删除这条待办吗？',
       success: res => {
         if (res.confirm) {
+          // Remove from local state immediately
+          const todos = this.data.todos.filter(item => item._id !== id);
+          this.setData({ todos });
+          wx.showToast({ title: '删除成功' });
+          
+          // Sync with server in background
           wx.cloud.callFunction({
             name: 'todos',
             data: { action: 'delete', data: { id } },
-            success: () => {
-              wx.showToast({ title: '删除成功' });
+            fail: () => {
+              wx.showToast({ title: '删除失败', icon: 'none' });
               this.loadTodos();
             }
           });
@@ -566,5 +623,15 @@ Page({
         this.setData({ todoEditShow: false });
       }
     });
+  },
+
+  // Helper function to format date time
+  formatDateTime(date) {
+    const chinaTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+    const month = (chinaTime.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = chinaTime.getUTCDate().toString().padStart(2, '0');
+    const hours = chinaTime.getUTCHours().toString().padStart(2, '0');
+    const minutes = chinaTime.getUTCMinutes().toString().padStart(2, '0');
+    return `${month}-${day} ${hours}:${minutes}`;
   }
 });
