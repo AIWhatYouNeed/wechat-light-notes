@@ -338,6 +338,15 @@
   margin-left: 20rpx;
 }
 
+.todo-edit {
+  padding: 8rpx 20rpx;
+  background: #e3f2fd;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  color: #2196f3;
+  margin-left: 20rpx;
+}
+
 /* Empty State */
 .empty-state {
   display: flex;

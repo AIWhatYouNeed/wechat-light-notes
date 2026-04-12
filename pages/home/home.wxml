@@ -123,6 +123,7 @@
               </view>
               <text class="todo-time">{{item.createTimeStr}}</text>
             </view>
+            <text class="todo-edit" bindtap="editTodo" data-item="{{item}}" wx:if="{{!todosBatchMode}}">编辑</text>
             <text class="todo-delete" bindtap="deleteTodo" data-id="{{item._id}}" wx:if="{{!todosBatchMode}}">删除</text>
           </view>
         </view>
