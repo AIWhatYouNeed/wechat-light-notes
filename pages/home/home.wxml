@@ -61,6 +61,7 @@
                 <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
                   <text wx:if="{{segment.type === 'text'}}" class="note-preview">{{segment.content}}</text>
                   <text wx:if="{{segment.type === 'link'}}" class="note-preview link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
+                  <image wx:if="{{segment.type === 'image'}}" class="note-image" src="{{segment.src}}" mode="aspectFill" binderror="onImageError" data-index="{{index}}" data-note-id="{{item._id}}"></image>
                 </block>
               </view>
               <text class="note-time">{{item.createTime}}</text>
@@ -119,6 +120,7 @@
                 <block wx:for="{{item.contentSegments}}" wx:for-item="segment" wx:key="index">
                   <text wx:if="{{segment.type === 'text'}}" class="todo-text">{{segment.content}}</text>
                   <text wx:if="{{segment.type === 'link'}}" class="todo-text link" bindtap="openLink" data-url="{{segment.content}}">{{segment.content}}</text>
+                  <image wx:if="{{segment.type === 'image'}}" class="todo-image" src="{{segment.src}}" mode="aspectFill" binderror="onTodoImageError" data-index="{{index}}" data-todo-id="{{item._id}}"></image>
                 </block>
               </view>
               <text class="todo-time">{{item.createTimeStr}}</text>

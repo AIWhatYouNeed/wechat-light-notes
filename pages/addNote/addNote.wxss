@@ -30,12 +30,51 @@
   padding: 20rpx 0;
 }
 
+/* Editor component specific styles */
+.content-input .ql-container {
+  font-size: 32rpx;
+  line-height: 1.8;
+}
+
+.content-input .ql-editor {
+  min-height: 360rpx;
+  padding: 0;
+}
+
 .word-count {
   display: block;
   text-align: right;
   font-size: 24rpx;
   color: #999;
   margin-top: 10rpx;
+}
+
+.markdown-toolbar {
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+  margin-bottom: 20rpx;
+}
+
+.tool-btn {
+  width: 64rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  text-align: center;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+.tool-btn.italic {
+  font-style: italic;
+}
+
+.tool-btn:active {
+  background: #e0e0e0;
 }
 
 .color-picker {
@@ -85,12 +124,114 @@
   word-break: break-all;
 }
 
-.preview-content {
-  display: block;
+.preview-content-wrapper {
   font-size: 28rpx;
   color: #666;
   line-height: 1.6;
   word-break: break-all;
+}
+
+.preview-paragraph {
+  margin-bottom: 16rpx;
+}
+
+.preview-text {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+}
+
+.preview-link {
+  font-size: 28rpx;
+  color: #576b95;
+  text-decoration: underline;
+}
+
+.preview-image {
+  width: 100%;
+  height: 300rpx;
+  border-radius: 12rpx;
+  margin: 16rpx 0;
+  background: #f0f0f0;
+}
+
+.preview-inline-image {
+  width: 100%;
+  height: 200rpx;
+  border-radius: 8rpx;
+  margin: 8rpx 0;
+  background: #f0f0f0;
+}
+
+/* Clickable images */
+.preview-image,
+.preview-inline-image {
+  cursor: pointer;
+}
+
+.preview-placeholder {
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* Headings */
+.preview-heading {
+  font-weight: bold;
+  margin: 24rpx 0 16rpx 0;
+}
+
+.preview-heading-1 {
+  font-size: 40rpx;
+}
+
+.preview-heading-2 {
+  font-size: 36rpx;
+}
+
+.preview-heading-3 {
+  font-size: 32rpx;
+}
+
+/* List items */
+.preview-list-item {
+  display: flex;
+  margin-bottom: 8rpx;
+  padding-left: 16rpx;
+}
+
+.preview-bullet {
+  color: #667eea;
+  margin-right: 8rpx;
+}
+
+.preview-number {
+  color: #667eea;
+  margin-right: 8rpx;
+  min-width: 40rpx;
+}
+
+/* Bold and Italic */
+.preview-bold {
+  font-weight: bold;
+}
+
+.preview-italic {
+  font-style: italic;
+}
+
+/* Inline code */
+.preview-inline-code {
+  font-family: monospace;
+  background: #f5f5f5;
+  padding: 4rpx 8rpx;
+  border-radius: 4rpx;
+  font-size: 26rpx;
+  color: #e83e8c;
+}
+
+/* Line break */
+.preview-br {
+  height: 16rpx;
 }
 
 .footer {

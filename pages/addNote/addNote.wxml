@@ -1,8 +1,20 @@
 <view class="container">
   <view class="form">
     <input class="title-input" placeholder="标题（可选）" value="{{title}}" bindinput="onTitleInput" />
-    <textarea class="content-input" placeholder="记录你的想法..." model:value="{{content}}" maxlength="2000" />
-    <text class="word-count">{{content.length}}/2000</text>
+    
+    <!-- Markdown Toolbar -->
+    <view class="markdown-toolbar">
+      <text class="tool-btn" bindtap="insertBold">B</text>
+      <text class="tool-btn italic" bindtap="insertItalic">I</text>
+      <text class="tool-btn" bindtap="insertHeading">H</text>
+      <text class="tool-btn" bindtap="insertList">☰</text>
+      <text class="tool-btn" bindtap="insertOrderedList">1.</text>
+      <text class="tool-btn" bindtap="insertCode">{ }</text>
+      <text class="tool-btn" bindtap="uploadImage">🖼️</text>
+    </view>
+    
+    <editor id="contentEditor" class="content-input" placeholder="支持 Markdown 语法..." bindinput="onEditorInput" bindready="onEditorReady" maxlength="5000" />
+    <text class="word-count">{{content.length}}/5000</text>
   </view>
 
   <view class="color-picker">
@@ -19,7 +31,51 @@
 
   <view class="preview" style="background: {{color}};">
     <text class="preview-title">{{title || '预览标题'}}</text>
-    <text class="preview-content" user-select>{{content || '预览内容...'}}</text>
+    <view class="preview-content-wrapper">
+      <block wx:for="{{parsedContent}}" wx:for-item="segment" wx:key="index">
+        <!-- Line breaks -->
+        <view wx:if="{{segment.type === 'br'}}" class="preview-br"></view>
+        
+        <!-- Headings -->
+        <view wx:if="{{segment.type === 'heading'}}" class="preview-heading preview-heading-{{segment.level}}">
+          <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+            <text wx:if="{{inline.type === 'text'}}" user-select>{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'bold'}}" class="preview-bold" user-select>{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'italic'}}" class="preview-italic" user-select>{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'link'}}" class="preview-link" bindtap="openLink" data-url="{{inline.content}}">{{inline.content}}</text>
+            <image wx:if="{{inline.type === 'image'}}" class="preview-inline-image" src="{{tempImageUrl || inline.src}}" mode="aspectFill" binderror="onPreviewImageError" bindtap="previewImage" data-src="{{inline.src}}"></image>
+          </block>
+        </view>
+        
+        <!-- List items -->
+        <view wx:if="{{segment.type === 'list-item'}}" class="preview-list-item">
+          <text wx:if="{{segment.listType === 'unordered'}}" class="preview-bullet">• </text>
+          <text wx:if="{{segment.listType === 'ordered'}}" class="preview-number">{{segment.number}}. </text>
+          <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+            <text wx:if="{{inline.type === 'text'}}" user-select>{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'bold'}}" class="preview-bold" user-select>{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'italic'}}" class="preview-italic" user-select>{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'link'}}" class="preview-link" bindtap="openLink" data-url="{{inline.content}}">{{inline.content}}</text>
+            <image wx:if="{{inline.type === 'image'}}" class="preview-inline-image" src="{{tempImageUrl || inline.src}}" mode="aspectFill" binderror="onPreviewImageError" bindtap="previewImage" data-src="{{inline.src}}"></image>
+          </block>
+        </view>
+        
+        <!-- Paragraphs -->
+        <view wx:if="{{segment.type === 'paragraph'}}" class="preview-paragraph">
+          <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+            <text wx:if="{{inline.type === 'text'}}" class="preview-text" user-select>{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'bold'}}" class="preview-bold" user-select>{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'italic'}}" class="preview-italic" user-select>{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+            <text wx:if="{{inline.type === 'link'}}" class="preview-link" bindtap="openLink" data-url="{{inline.content}}">{{inline.content}}</text>
+            <image wx:if="{{inline.type === 'image'}}" class="preview-image" src="{{tempImageUrl || inline.src}}" mode="aspectFill" binderror="onPreviewImageError" bindtap="previewImage" data-src="{{inline.src}}"></image>
+          </block>
+        </view>
+      </block>
+      <text wx:if="{{!parsedContent || parsedContent.length === 0}}" class="preview-placeholder">预览内容...</text>
+    </view>
   </view>
 </view>
 

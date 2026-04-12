@@ -389,24 +389,84 @@ Page({
     wx.navigateTo({ url: '/pages/groups/groups' });
   },
 
-  // Parse text into segments (text and links)
+  // Parse text into segments (text, links, images, markdown)
   parseSegments(text) {
     if (!text) return [{ type: 'text', content: '' }];
     
-    const urlPattern = /(https?:\/\/[^\s]+)/g;
     const segments = [];
+    let remaining = text;
+    
+    // Patterns
+    const imagePattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const linkPattern = /(https?:\/\/[^\s\)]+)/g;
+    const boldPattern = /\*\*([^*]+)\*\*/g;
+    const italicPattern = /\*([^*]+)\*/g;
+    const codePattern = /`([^`]+)`/g;
+    
+    // Find all special elements
+    const elements = [];
+    let match;
+    
+    // Find images
+    while ((match = imagePattern.exec(text)) !== null) {
+      elements.push({
+        type: 'image',
+        alt: match[1],
+        src: match[2],
+        index: match.index,
+        length: match[0].length
+      });
+    }
+    
+    // Sort by position
+    elements.sort((a, b) => a.index - b.index);
+    
+    // Build segments
+    let lastIndex = 0;
+    elements.forEach(el => {
+      // Add text before this element
+      if (el.index > lastIndex) {
+        const textContent = text.substring(lastIndex, el.index);
+        // Process text for links, bold, italic, code
+        segments.push(...this.parseTextStyles(textContent));
+      }
+      
+      // Add the element
+      if (el.type === 'image') {
+        segments.push({
+          type: 'image',
+          src: el.src,
+          alt: el.alt
+        });
+      }
+      
+      lastIndex = el.index + el.length;
+    });
+    
+    // Add remaining text
+    if (lastIndex < text.length) {
+      const textContent = text.substring(lastIndex);
+      segments.push(...this.parseTextStyles(textContent));
+    }
+    
+    return segments.length > 0 ? segments : [{ type: 'text', content: text }];
+  },
+
+  // Parse text styles (links, bold, italic, code)
+  parseTextStyles(text) {
+    const segments = [];
+    // Simple parsing for links
+    const linkPattern = /(https?:\/\/[^\s]+)/g;
     let lastIndex = 0;
     let match;
     
-    while ((match = urlPattern.exec(text)) !== null) {
-      // Add text before link
+    while ((match = linkPattern.exec(text)) !== null) {
       if (match.index > lastIndex) {
         segments.push({
           type: 'text',
           content: text.substring(lastIndex, match.index)
         });
       }
-      // Add link
       segments.push({
         type: 'link',
         content: match[0]
@@ -414,7 +474,6 @@ Page({
       lastIndex = match.index + match[0].length;
     }
     
-    // Add remaining text
     if (lastIndex < text.length) {
       segments.push({
         type: 'text',
@@ -423,6 +482,15 @@ Page({
     }
     
     return segments.length > 0 ? segments : [{ type: 'text', content: text }];
+  },
+
+  // Convert cloud fileID to temp URL for images
+  convertImageFileID(fileID) {
+    if (fileID && fileID.startsWith('cloud://')) {
+      // Return a placeholder, actual conversion happens when rendering
+      return fileID;
+    }
+    return fileID;
   },
 
   // Open link directly
@@ -707,5 +775,86 @@ Page({
       const updatedUserInfo = { ...this.data.userInfo, avatarUrl: '/static/icon/headPortrait.png' };
       this.setData({ userInfo: updatedUserInfo });
     }
+  },
+
+  // Handle note image load error
+  onImageError(e) {
+    const { index, noteId } = e.currentTarget.dataset;
+    console.log('Image load error for note:', noteId, 'segment:', index);
+    // Find the note and convert image fileID to temp URL
+    const notes = this.data.notes.map(note => {
+      if (note._id === noteId && note.contentSegments) {
+        const segments = note.contentSegments.map((seg, idx) => {
+          if (idx === index && seg.type === 'image' && seg.src.startsWith('cloud://')) {
+            // Mark for conversion - actual conversion would require async operation
+            // For now, just mark it
+            return { ...seg, needsConversion: true };
+          }
+          return seg;
+        });
+        return { ...note, contentSegments: segments };
+      }
+      return note;
+    });
+    this.setData({ notes });
+    
+    // Convert the fileID to temp URL
+    const note = notes.find(n => n._id === noteId);
+    if (note && note.contentSegments[index]) {
+      const fileID = note.contentSegments[index].src;
+      wx.cloud.getTempFileURL({
+        fileList: [fileID],
+        success: res => {
+          const tempUrl = res.fileList[0].tempFileURL;
+          const updatedNotes = this.data.notes.map(n => {
+            if (n._id === noteId && n.contentSegments) {
+              const segments = n.contentSegments.map((seg, idx) => {
+                if (idx === index && seg.type === 'image') {
+                  return { ...seg, src: tempUrl, needsConversion: false };
+                }
+                return seg;
+              });
+              return { ...n, contentSegments: segments };
+            }
+            return n;
+          });
+          this.setData({ notes: updatedNotes });
+        }
+      });
+    }
+  },
+
+  // Handle todo image load error
+  onTodoImageError(e) {
+    const { index, todoId } = e.currentTarget.dataset;
+    console.log('Todo image load error:', todoId, 'segment:', index);
+    // Similar to note image error handling
+    const todos = this.data.todos.map(todo => {
+      if (todo._id === todoId && todo.contentSegments) {
+        const segment = todo.contentSegments[index];
+        if (segment && segment.type === 'image' && segment.src.startsWith('cloud://')) {
+          wx.cloud.getTempFileURL({
+            fileList: [segment.src],
+            success: res => {
+              const tempUrl = res.fileList[0].tempFileURL;
+              const updatedTodos = this.data.todos.map(t => {
+                if (t._id === todoId && t.contentSegments) {
+                  const segments = t.contentSegments.map((seg, idx) => {
+                    if (idx === index && seg.type === 'image') {
+                      return { ...seg, src: tempUrl };
+                    }
+                    return seg;
+                  });
+                  return { ...t, contentSegments: segments };
+                }
+                return t;
+              });
+              this.setData({ todos: updatedTodos });
+            }
+          });
+        }
+      }
+      return todo;
+    });
   }
 });
