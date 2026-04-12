@@ -135,12 +135,11 @@ Page({
       success: res => {
         const fileID = res.fileID;
         
-        // Save fileID to database (permanent), not temp URL
-        // Update local storage with fileID
+        // Save fileID to local storage (permanent identifier)
         const userInfoWithFileID = { ...this.data.userInfo, avatarUrl: fileID };
         wx.setStorageSync('userInfo', userInfoWithFileID);
         
-        // Convert to temp URL for immediate display
+        // Convert to temp URL for immediate display only (not saved)
         wx.cloud.getTempFileURL({
           fileList: [fileID],
           success: urlRes => {
@@ -153,6 +152,8 @@ Page({
           fail: err => {
             wx.hideLoading();
             console.error('Get temp URL failed:', err);
+            // Still show fileID in data, will be converted on next page load
+            this.setData({ userInfo: userInfoWithFileID });
             wx.showToast({ title: '头像已更新' });
           }
         });

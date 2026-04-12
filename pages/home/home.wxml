@@ -4,7 +4,7 @@
     <!-- Header -->
     <view class="header">
       <view class="user-info" bindtap="goToMine">
-        <image class="avatar" src="{{userInfo.avatarUrl || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+        <image class="avatar" src="{{userInfo.avatarUrl || '/static/icon/headPortrait.png'}}" mode="aspectFill" binderror="onAvatarError"></image>
         <text class="nickname">{{userInfo.nickName || '用户'}}</text>
       </view>
       <view class="header-actions">

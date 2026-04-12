@@ -46,9 +46,48 @@ Page({
       return;
     }
     
-    // Refresh user info in case it was updated in mine page
-    this.setData({ userInfo });
+    // Refresh user info from cloud to get latest avatar
+    this.refreshUserInfo();
     this.loadData();
+  },
+
+  // Refresh user info from cloud database
+  refreshUserInfo() {
+    const localUserInfo = wx.getStorageSync('userInfo');
+    
+    wx.cloud.callFunction({
+      name: 'login',
+      success: res => {
+        if (res.result && res.result.code === 0) {
+          const cloudUserInfo = res.result.data.userInfo;
+          
+          // Merge cloud data with local (keep openid)
+          const updatedUserInfo = {
+            ...localUserInfo,
+            nickName: cloudUserInfo.nickName || localUserInfo.nickName,
+            avatarUrl: cloudUserInfo.avatarUrl || localUserInfo.avatarUrl
+          };
+          
+          // Save cloud avatar to storage (fileID)
+          wx.setStorageSync('userInfo', updatedUserInfo);
+          
+          // Convert to temp URL for display
+          if (updatedUserInfo.avatarUrl && updatedUserInfo.avatarUrl.startsWith('cloud://')) {
+            this.convertAvatarToUrl(updatedUserInfo.avatarUrl, updatedUserInfo);
+          } else {
+            this.setData({ userInfo: updatedUserInfo });
+          }
+        }
+      },
+      fail: () => {
+        // Fallback to local data
+        if (localUserInfo.avatarUrl && localUserInfo.avatarUrl.startsWith('cloud://')) {
+          this.convertAvatarToUrl(localUserInfo.avatarUrl, localUserInfo);
+        } else {
+          this.setData({ userInfo: localUserInfo });
+        }
+      }
+    });
   },
 
   onPullDownRefresh() {
@@ -60,11 +99,32 @@ Page({
   checkLogin() {
     const userInfo = wx.getStorageSync('userInfo');
     if (userInfo) {
-      this.setData({ userInfo });
+      // Convert cloud fileID to temp URL if needed
+      if (userInfo.avatarUrl && userInfo.avatarUrl.startsWith('cloud://')) {
+        this.convertAvatarToUrl(userInfo.avatarUrl, userInfo);
+      } else {
+        this.setData({ userInfo });
+      }
       this.loadData();
     } else {
       this.login();
     }
+  },
+
+  // Convert cloud fileID to temporary URL
+  convertAvatarToUrl(fileID, userInfo) {
+    wx.cloud.getTempFileURL({
+      fileList: [fileID],
+      success: res => {
+        const tempUrl = res.fileList[0].tempFileURL;
+        const updatedUserInfo = { ...userInfo, avatarUrl: tempUrl };
+        this.setData({ userInfo: updatedUserInfo });
+      },
+      fail: err => {
+        console.error('Convert avatar to URL failed:', err);
+        this.setData({ userInfo });
+      }
+    });
   },
 
   login() {
@@ -633,5 +693,19 @@ Page({
     const hours = chinaTime.getUTCHours().toString().padStart(2, '0');
     const minutes = chinaTime.getUTCMinutes().toString().padStart(2, '0');
     return `${month}-${day} ${hours}:${minutes}`;
+  },
+
+  // Handle avatar load error (e.g., expired temp URL)
+  onAvatarError() {
+    console.log('Avatar load error, trying to refresh...');
+    const userInfo = wx.getStorageSync('userInfo');
+    if (userInfo && userInfo.avatarUrl && userInfo.avatarUrl.startsWith('cloud://')) {
+      // Try to get fresh temp URL
+      this.convertAvatarToUrl(userInfo.avatarUrl, userInfo);
+    } else {
+      // Fallback to default avatar
+      const updatedUserInfo = { ...this.data.userInfo, avatarUrl: '/static/icon/headPortrait.png' };
+      this.setData({ userInfo: updatedUserInfo });
+    }
   }
 });

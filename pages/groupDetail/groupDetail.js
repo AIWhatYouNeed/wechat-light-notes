@@ -848,5 +848,20 @@ Page({
     const hours = chinaTime.getUTCHours().toString().padStart(2, '0');
     const minutes = chinaTime.getUTCMinutes().toString().padStart(2, '0');
     return `${month}-${day} ${hours}:${minutes}`;
+  },
+
+  // Handle creator avatar load error
+  onCreatorAvatarError(e) {
+    const { avatar, index } = e.currentTarget.dataset;
+    // If it's a cloud fileID, the cloud function should have converted it
+    // If it's an expired temp URL, we can't refresh it easily without reloading data
+    // Just fallback to default for now
+    if (avatar && !avatar.startsWith('cloud://')) {
+      const todos = this.data.todos;
+      if (todos[index]) {
+        todos[index].creatorAvatar = '/static/icon/headPortrait.png';
+        this.setData({ todos });
+      }
+    }
   }
 });

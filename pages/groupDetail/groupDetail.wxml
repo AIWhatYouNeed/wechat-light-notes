@@ -151,7 +151,7 @@
             </view>
             <view class="todo-expand" wx:if="{{item.content.length > 50}}">点击查看详情</view>
             <view class="todo-meta">
-              <image class="todo-author-avatar" src="{{item.creatorAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+              <image class="todo-author-avatar" src="{{item.creatorAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill" data-avatar="{{item.creatorAvatar}}" data-index="{{index}}" binderror="onCreatorAvatarError"></image>
               <text class="todo-author-name">{{item.creatorName}}</text>
               <text class="todo-time">{{item.createTimeStr}}</text>
               <text class="history-btn-small" catchtap="showTodoHistory" data-todo="{{item}}" wx:if="{{item.history && item.history.length > 1}}">历史</text>
@@ -160,7 +160,7 @@
           <view class="todo-info" wx:if="{{todosBatchMode}}">
             <text class="todo-text">{{item.content}}</text>
             <view class="todo-meta">
-              <image class="todo-author-avatar" src="{{item.creatorAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill"></image>
+              <image class="todo-author-avatar" src="{{item.creatorAvatar || '/static/icon/headPortrait.png'}}" mode="aspectFill" data-avatar="{{item.creatorAvatar}}" data-index="{{index}}" binderror="onCreatorAvatarError"></image>
               <text class="todo-author-name">{{item.creatorName}}</text>
               <text class="todo-time">{{item.createTimeStr}}</text>
             </view>
