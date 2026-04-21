@@ -181,7 +181,7 @@
 </view>
 
 <!-- Add Note Modal -->
-<view class="modal {{showAddModal ? 'show' : ''}}">
+<view class="modal {{showAddModal ? 'show' : ''}}" wx:if="{{showAddModal}}">
   <view class="modal-mask" bindtap="closeAddModal"></view>
   <view class="modal-content note-edit-full">
     <view class="note-edit-container">
@@ -193,8 +193,20 @@
       <view class="note-edit-scroll">
         <view class="note-edit-form">
           <input class="note-edit-title-input" placeholder="标题（可选）" value="{{noteTitle}}" bindinput="onTitleInput" />
-          <textarea class="note-edit-content-input" placeholder="记录你的想法..." model:value="{{noteContent}}" maxlength="2000" />
-          <text class="note-edit-word-count">{{noteContent.length}}/2000</text>
+          
+          <!-- Markdown Toolbar -->
+          <view class="markdown-toolbar">
+            <text class="tool-btn" bindtap="insertBold">B</text>
+            <text class="tool-btn italic" bindtap="insertItalic">I</text>
+            <text class="tool-btn" bindtap="insertHeading">H</text>
+            <text class="tool-btn" bindtap="insertList">☰</text>
+            <text class="tool-btn" bindtap="insertOrderedList">1.</text>
+            <text class="tool-btn" bindtap="insertCode">{ }</text>
+            <text class="tool-btn" bindtap="uploadImage">🖼️</text>
+          </view>
+          
+          <editor id="addNoteEditor" class="note-edit-content-input" placeholder="支持 Markdown 语法..." bindinput="onEditorInput" bindready="onAddEditorReady" maxlength="5000" />
+          <text class="note-edit-word-count">{{noteContent.length}}/5000</text>
         </view>
         <view class="note-edit-color-section">
           <text class="note-edit-color-label">背景颜色</text>
@@ -204,7 +216,44 @@
         </view>
         <view class="note-edit-preview" style="background: {{selectedColor}};">
           <text class="note-edit-preview-title">{{noteTitle || '预览标题'}}</text>
-          <text class="note-edit-preview-content">{{noteContent || '预览内容...'}}</text>
+          <view class="note-edit-preview-content-wrapper">
+            <block wx:for="{{parsedNoteContent}}" wx:for-item="segment" wx:key="index">
+              <view wx:if="{{segment.type === 'br'}}" class="preview-br"></view>
+              <view wx:if="{{segment.type === 'heading'}}" class="preview-heading preview-heading-{{segment.level}}">
+                <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+                  <text wx:if="{{inline.type === 'text'}}">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'bold'}}" class="preview-bold">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'italic'}}" class="preview-italic">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'link'}}" class="preview-link">{{inline.content}}</text>
+                  <image wx:if="{{inline.type === 'image'}}" class="preview-inline-image" src="{{inline.src}}" mode="aspectFill"></image>
+                </block>
+              </view>
+              <view wx:if="{{segment.type === 'list-item'}}" class="preview-list-item">
+                <text wx:if="{{segment.listType === 'unordered'}}" class="preview-bullet">• </text>
+                <text wx:if="{{segment.listType === 'ordered'}}" class="preview-number">{{segment.number}}. </text>
+                <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+                  <text wx:if="{{inline.type === 'text'}}">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'bold'}}" class="preview-bold">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'italic'}}" class="preview-italic">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'link'}}" class="preview-link">{{inline.content}}</text>
+                  <image wx:if="{{inline.type === 'image'}}" class="preview-inline-image" src="{{inline.src}}" mode="aspectFill"></image>
+                </block>
+              </view>
+              <view wx:if="{{segment.type === 'paragraph'}}" class="preview-paragraph">
+                <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+                  <text wx:if="{{inline.type === 'text'}}">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'bold'}}" class="preview-bold">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'italic'}}" class="preview-italic">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'link'}}" class="preview-link">{{inline.content}}</text>
+                  <image wx:if="{{inline.type === 'image'}}" class="preview-image" src="{{inline.src}}" mode="aspectFill"></image>
+                </block>
+              </view>
+            </block>
+            <text wx:if="{{!parsedNoteContent || parsedNoteContent.length === 0}}" class="preview-placeholder">预览内容...</text>
+          </view>
         </view>
       </view>
     </view>
@@ -212,7 +261,7 @@
 </view>
 
 <!-- Edit Note Modal -->
-<view class="modal {{showEditModal ? 'show' : ''}}">
+<view class="modal {{showEditModal ? 'show' : ''}}" wx:if="{{showEditModal}}">
   <view class="modal-mask" bindtap="closeEditModal"></view>
   <view class="modal-content note-edit-full">
     <view class="note-edit-container">
@@ -224,8 +273,20 @@
       <view class="note-edit-scroll">
         <view class="note-edit-form">
           <input class="note-edit-title-input" placeholder="标题（可选）" value="{{noteTitle}}" bindinput="onTitleInput" />
-          <textarea class="note-edit-content-input" placeholder="记录你的想法..." model:value="{{noteContent}}" maxlength="2000" />
-          <text class="note-edit-word-count">{{noteContent.length}}/2000</text>
+          
+          <!-- Markdown Toolbar -->
+          <view class="markdown-toolbar">
+            <text class="tool-btn" bindtap="insertBold">B</text>
+            <text class="tool-btn italic" bindtap="insertItalic">I</text>
+            <text class="tool-btn" bindtap="insertHeading">H</text>
+            <text class="tool-btn" bindtap="insertList">☰</text>
+            <text class="tool-btn" bindtap="insertOrderedList">1.</text>
+            <text class="tool-btn" bindtap="insertCode">{ }</text>
+            <text class="tool-btn" bindtap="uploadImage">🖼️</text>
+          </view>
+          
+          <editor id="editNoteEditor" class="note-edit-content-input" placeholder="支持 Markdown 语法..." bindinput="onEditorInput" bindready="onEditEditorReady" maxlength="5000" />
+          <text class="note-edit-word-count">{{noteContent.length}}/5000</text>
         </view>
         <view class="note-edit-color-section">
           <text class="note-edit-color-label">背景颜色</text>
@@ -235,7 +296,44 @@
         </view>
         <view class="note-edit-preview" style="background: {{selectedColor}};">
           <text class="note-edit-preview-title">{{noteTitle || '预览标题'}}</text>
-          <text class="note-edit-preview-content">{{noteContent || '预览内容...'}}</text>
+          <view class="note-edit-preview-content-wrapper">
+            <block wx:for="{{parsedNoteContent}}" wx:for-item="segment" wx:key="index">
+              <view wx:if="{{segment.type === 'br'}}" class="preview-br"></view>
+              <view wx:if="{{segment.type === 'heading'}}" class="preview-heading preview-heading-{{segment.level}}">
+                <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+                  <text wx:if="{{inline.type === 'text'}}">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'bold'}}" class="preview-bold">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'italic'}}" class="preview-italic">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'link'}}" class="preview-link">{{inline.content}}</text>
+                  <image wx:if="{{inline.type === 'image'}}" class="preview-inline-image" src="{{inline.src}}" mode="aspectFill"></image>
+                </block>
+              </view>
+              <view wx:if="{{segment.type === 'list-item'}}" class="preview-list-item">
+                <text wx:if="{{segment.listType === 'unordered'}}" class="preview-bullet">• </text>
+                <text wx:if="{{segment.listType === 'ordered'}}" class="preview-number">{{segment.number}}. </text>
+                <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+                  <text wx:if="{{inline.type === 'text'}}">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'bold'}}" class="preview-bold">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'italic'}}" class="preview-italic">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'link'}}" class="preview-link">{{inline.content}}</text>
+                  <image wx:if="{{inline.type === 'image'}}" class="preview-inline-image" src="{{inline.src}}" mode="aspectFill"></image>
+                </block>
+              </view>
+              <view wx:if="{{segment.type === 'paragraph'}}" class="preview-paragraph">
+                <block wx:for="{{segment.content}}" wx:for-item="inline" wx:key="idx">
+                  <text wx:if="{{inline.type === 'text'}}">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'bold'}}" class="preview-bold">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'italic'}}" class="preview-italic">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'code'}}" class="preview-inline-code">{{inline.content}}</text>
+                  <text wx:if="{{inline.type === 'link'}}" class="preview-link">{{inline.content}}</text>
+                  <image wx:if="{{inline.type === 'image'}}" class="preview-image" src="{{inline.src}}" mode="aspectFill"></image>
+                </block>
+              </view>
+            </block>
+            <text wx:if="{{!parsedNoteContent || parsedNoteContent.length === 0}}" class="preview-placeholder">预览内容...</text>
+          </view>
         </view>
       </view>
     </view>
@@ -264,7 +362,43 @@
     <view class="modal-header">{{previewData.title || '无标题'}}</view>
     <view class="modal-body preview-body">
       <scroll-view scroll-y class="preview-scroll">
-        <view class="preview-content">{{previewData.content}}</view>
+        <view class="preview-content">
+          <block wx:for="{{parsedPreviewContent}}" wx:key="index">
+            <view wx:if="{{item.type === 'paragraph'}}" class="md-paragraph">
+              <block wx:for="{{item.content}}" wx:for-item="seg" wx:key="index">
+                <text wx:if="{{seg.type === 'text'}}">{{seg.content}}</text>
+                <text wx:if="{{seg.type === 'bold'}}" class="md-bold">{{seg.content}}</text>
+                <text wx:if="{{seg.type === 'italic'}}" class="md-italic">{{seg.content}}</text>
+                <text wx:if="{{seg.type === 'code'}}" class="md-code">{{seg.content}}</text>
+                <image wx:if="{{seg.type === 'image'}}" class="md-image" src="{{seg.src}}" mode="widthFix" bindtap="previewImage" data-src="{{seg.src}}"></image>
+                <text wx:if="{{seg.type === 'link'}}" class="md-link" bindtap="openLink" data-url="{{seg.content}}">{{seg.content}}</text>
+              </block>
+            </view>
+            <view wx:if="{{item.type === 'heading'}}" class="md-heading md-h{{item.level}}">
+              <block wx:for="{{item.content}}" wx:for-item="seg" wx:key="index">
+                <text wx:if="{{seg.type === 'text'}}">{{seg.content}}</text>
+                <text wx:if="{{seg.type === 'bold'}}" class="md-bold">{{seg.content}}</text>
+                <text wx:if="{{seg.type === 'italic'}}" class="md-italic">{{seg.content}}</text>
+                <text wx:if="{{seg.type === 'code'}}" class="md-code">{{seg.content}}</text>
+                <image wx:if="{{seg.type === 'image'}}" class="md-image" src="{{seg.src}}" mode="widthFix" bindtap="previewImage" data-src="{{seg.src}}"></image>
+                <text wx:if="{{seg.type === 'link'}}" class="md-link" bindtap="openLink" data-url="{{seg.content}}">{{seg.content}}</text>
+              </block>
+            </view>
+            <view wx:if="{{item.type === 'list-item'}}" class="md-list-item {{item.listType === 'ordered' ? 'md-ordered' : 'md-unordered'}}">
+              <text wx:if="{{item.listType === 'ordered'}}" class="md-list-number">{{item.number}}. </text>
+              <text wx:if="{{item.listType === 'unordered'}}" class="md-list-bullet">• </text>
+              <block wx:for="{{item.content}}" wx:for-item="seg" wx:key="index">
+                <text wx:if="{{seg.type === 'text'}}">{{seg.content}}</text>
+                <text wx:if="{{seg.type === 'bold'}}" class="md-bold">{{seg.content}}</text>
+                <text wx:if="{{seg.type === 'italic'}}" class="md-italic">{{seg.content}}</text>
+                <text wx:if="{{seg.type === 'code'}}" class="md-code">{{seg.content}}</text>
+                <image wx:if="{{seg.type === 'image'}}" class="md-image" src="{{seg.src}}" mode="widthFix" bindtap="previewImage" data-src="{{seg.src}}"></image>
+                <text wx:if="{{seg.type === 'link'}}" class="md-link" bindtap="openLink" data-url="{{seg.content}}">{{seg.content}}</text>
+              </block>
+            </view>
+            <view wx:if="{{item.type === 'br'}}" class="md-br"></view>
+          </block>
+        </view>
       </scroll-view>
       <view class="preview-meta">
         <view class="preview-author">

@@ -9,6 +9,7 @@ Page({
     showMembers: false,
     noteTitle: '',
     noteContent: '',
+    parsedNoteContent: [],
     currentEditNote: null,
     colors: ['#ffffff', '#fff9c4', '#c8e6c9', '#bbdefb', '#f8bbd9', '#d7ccc8'],
     selectedColor: '#ffffff',
@@ -36,6 +37,10 @@ Page({
     joinRequests: [],
     showJoinRequests: false
   },
+
+  // Editor contexts
+  addEditorCtx: null,
+  editEditorCtx: null,
 
   onLoad(options) {
     const groupId = options.id;
@@ -145,20 +150,204 @@ Page({
       showAddModal: true,
       noteTitle: '',
       noteContent: '',
+      parsedNoteContent: [],
       selectedColor: '#ffffff'
     });
+    // Reset editor after modal opens
+    setTimeout(() => {
+      if (this.addEditorCtx) {
+        this.addEditorCtx.setContents({ html: '' });
+      }
+    }, 100);
   },
 
   closeAddModal() {
     this.setData({ showAddModal: false });
+    this.addEditorCtx = null;
   },
 
   onTitleInput(e) {
     this.setData({ noteTitle: e.detail.value });
   },
 
-  onContentInput(e) {
-    this.setData({ noteContent: e.detail.value });
+  // Editor ready callbacks
+  onAddEditorReady() {
+    const that = this;
+    wx.createSelectorQuery().in(this).select('#addNoteEditor').context(function(res) {
+      if (!res || !res.context) {
+        console.error('Add editor context not found');
+        return;
+      }
+      that.addEditorCtx = res.context;
+      console.log('Add editor ready, context obtained');
+    }).exec();
+  },
+
+  onEditEditorReady() {
+    const that = this;
+    wx.createSelectorQuery().in(this).select('#editNoteEditor').context(function(res) {
+      if (!res || !res.context) {
+        console.error('Editor context not found');
+        return;
+      }
+      that.editEditorCtx = res.context;
+      console.log('Edit editor ready, context obtained');
+      
+      // Set initial content if editing and content exists
+      // Use _pendingEditContent to handle cases where editor ready after showEditModal
+      const content = that._pendingEditContent || that.data.noteContent;
+      console.log('Setting edit editor content:', content ? content.substring(0, 50) : 'empty');
+      
+      if (content) {
+        const html = that.plainTextToHtml(content);
+        console.log('HTML to set:', html.substring(0, 100));
+        
+        that.editEditorCtx.setContents({
+          html: html,
+          success: () => {
+            console.log('Edit editor content set successfully');
+            that._pendingEditContent = null;
+          },
+          fail: (err) => {
+            console.error('Failed to set edit editor content:', err);
+            // Retry after a short delay
+            setTimeout(() => {
+              if (that.editEditorCtx) {
+                that.editEditorCtx.setContents({ html: html });
+              }
+            }, 200);
+          }
+        });
+      }
+    }).exec();
+  },
+
+  // Convert plain text to HTML for editor
+  plainTextToHtml(text) {
+    if (!text) return '';
+    // Split by newlines and wrap each line in a div for proper line breaks
+    return text
+      .split('\n')
+      .map(line => {
+        const escaped = line
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        return `<div>${escaped}</div>`;
+      })
+      .join('');
+  },
+
+  // Convert editor HTML to plain text
+  htmlToPlainText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<div><br><\/div>/gi, '\n')
+      .replace(/<p><br><\/p>/gi, '\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\u00A0/g, ' ')  // Also replace non-breaking space character
+      .trim();
+  },
+
+  // Editor input handler
+  onEditorInput(e) {
+    const html = e.detail.html;
+    console.log('Editor HTML:', html);
+    const content = this.htmlToPlainText(html);
+    console.log('Plain text:', content);
+    console.log('Parsed:', this.parseContent(content));
+    this.setData({
+      noteContent: content,
+      parsedNoteContent: this.parseContent(content)
+    });
+  },
+
+  // Insert Markdown at cursor
+  insertMarkdownAtCursor(text, selectionLength = 0) {
+    const editorCtx = this.data.showAddModal ? this.addEditorCtx : this.editEditorCtx;
+    if (!editorCtx) {
+      console.error('Editor context not available for toolbar action');
+      wx.showToast({ title: '编辑器未就绪', icon: 'none' });
+      return;
+    }
+
+    // Simply insert text at current cursor position
+    editorCtx.insertText({ text: text });
+  },
+
+  // Toolbar actions
+  insertBold() {
+    this.insertMarkdownAtCursor('****', 2);
+  },
+
+  insertItalic() {
+    this.insertMarkdownAtCursor('**', 1);
+  },
+
+  insertHeading() {
+    this.insertMarkdownAtCursor('## ', 0);
+  },
+
+  insertList() {
+    this.insertMarkdownAtCursor('- ', 0);
+  },
+
+  insertOrderedList() {
+    this.insertMarkdownAtCursor('1. ', 0);
+  },
+
+  insertCode() {
+    this.insertMarkdownAtCursor('```  ```', 3);
+  },
+
+  // Upload image
+  uploadImage() {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success: res => {
+        const tempFilePath = res.tempFiles[0].tempFilePath;
+        this.doUploadImage(tempFilePath);
+      },
+      fail: err => {
+        console.error('Choose media failed:', err);
+        wx.showToast({ title: '选择图片失败', icon: 'none' });
+      }
+    });
+  },
+
+  doUploadImage(filePath) {
+    wx.showLoading({ title: '上传中...' });
+
+    const cloudPath = `groupNotes/images/${Date.now()}_${Math.random().toString(36).substr(2, 6)}.jpg`;
+
+    wx.cloud.uploadFile({
+      cloudPath: cloudPath,
+      filePath: filePath,
+      success: res => {
+        const fileID = res.fileID;
+        const editorCtx = this.data.showAddModal ? this.addEditorCtx : this.editEditorCtx;
+        if (editorCtx) {
+          const imageMarkdown = `![image](${fileID})`;
+          editorCtx.insertText({ text: imageMarkdown });
+        }
+        wx.hideLoading();
+        wx.showToast({ title: '图片已插入' });
+      },
+      fail: err => {
+        wx.hideLoading();
+        wx.showToast({ title: '上传失败', icon: 'none' });
+        console.error('Upload image failed:', err);
+      }
+    });
   },
 
   selectColor(e) {
@@ -196,17 +385,29 @@ Page({
 
   showEditModal(e) {
     const note = e.currentTarget.dataset.note;
+    // Store content for editor to use when ready
+    this._pendingEditContent = note.content || '';
     this.setData({
       showEditModal: true,
       currentEditNote: note,
       noteTitle: note.title,
       noteContent: note.content,
+      parsedNoteContent: this.parseContent(note.content),
       selectedColor: note.color || '#ffffff'
     });
+    // Clear previous editor context and wait for new editor ready
+    this.editEditorCtx = null;
   },
 
   closeEditModal() {
-    this.setData({ showEditModal: false });
+    this.setData({ 
+      showEditModal: false,
+      noteContent: '',
+      noteTitle: '',
+      parsedNoteContent: []
+    });
+    this.editEditorCtx = null;
+    this._pendingEditContent = null;
   },
 
   updateNote() {
@@ -673,7 +874,8 @@ Page({
     this.setData({
       showPreviewModal: true,
       previewData: note,
-      previewType: 'note'
+      previewType: 'note',
+      parsedPreviewContent: this.parseContent(note.content)
     });
   },
 
@@ -682,7 +884,8 @@ Page({
     this.setData({
       showPreviewModal: true,
       previewData: todo,
-      previewType: 'todo'
+      previewType: 'todo',
+      parsedPreviewContent: this.parseContent(todo.content)
     });
   },
 
@@ -722,6 +925,152 @@ Page({
     return segments.length > 0 ? segments : [{ type: 'text', content: text }];
   },
 
+  // Parse content into segments for preview (Full Markdown support)
+  parseContent(text) {
+    if (!text) return [{ type: 'text', content: '' }];
+
+    const segments = [];
+    const lines = text.split('\n');
+    console.log('ParseContent lines:', lines);
+    let currentParagraph = null;
+
+    const flushParagraph = () => {
+      if (currentParagraph) {
+        segments.push({
+          type: 'paragraph',
+          content: currentParagraph
+        });
+        currentParagraph = null;
+      }
+    };
+
+    lines.forEach((line) => {
+      // Handle empty lines - flush current paragraph and add break
+      if (!line.trim()) {
+        flushParagraph();
+        segments.push({ type: 'br' });
+        return;
+      }
+
+      // Check for headings (# ## ###)
+      const headingMatch = line.match(/^\s*(#{1,3})\s+(.+)$/);
+      if (headingMatch) {
+        flushParagraph();
+        const level = headingMatch[1].length;
+        segments.push({
+          type: 'heading',
+          level: level,
+          content: this.parseInlineStyles(headingMatch[2])
+        });
+        return;
+      }
+
+      // Check for unordered list items (- or *)
+      const listMatch = line.match(/^\s*[\-\*]\s*(.*)$/);
+      if (listMatch && listMatch[1].trim()) {
+        flushParagraph();
+        segments.push({
+          type: 'list-item',
+          listType: 'unordered',
+          content: this.parseInlineStyles(listMatch[1])
+        });
+        return;
+      }
+
+      // Check for ordered list items (1. 2. etc)
+      const orderedListMatch = line.match(/^\s*(\d+)\.\s*(.*)$/);
+      if (orderedListMatch && orderedListMatch[2].trim()) {
+        flushParagraph();
+        segments.push({
+          type: 'list-item',
+          listType: 'ordered',
+          number: orderedListMatch[1],
+          content: this.parseInlineStyles(orderedListMatch[2])
+        });
+        return;
+      }
+
+      // Regular text - each line becomes its own paragraph for proper line breaks
+      const parsedLine = this.parseInlineStyles(line);
+      flushParagraph();
+      segments.push({
+        type: 'paragraph',
+        content: parsedLine
+      });
+    });
+
+    // Don't forget the last paragraph
+    flushParagraph();
+
+    return segments;
+  },
+
+  // Parse inline styles (bold, italic, code, links, images)
+  parseInlineStyles(text) {
+    const segments = [];
+    let remaining = text;
+
+    // Patterns for inline elements (order matters - check longer patterns first)
+    const patterns = [
+      { type: 'image', regex: /!\[([^\]]*)\]\(([^)]+)\)/ },
+      { type: 'bold', regex: /\*\*([^*]+)\*\*/ },
+      { type: 'italic', regex: /\*([^*]+)\*/ },
+      { type: 'code', regex: /`([^`]+)`/ },
+      { type: 'link', regex: /(https?:\/\/[^\s]+)/ }
+    ];
+
+    while (remaining.length > 0) {
+      let found = false;
+
+      // Try each pattern
+      for (const pattern of patterns) {
+        const match = remaining.match(pattern.regex);
+        if (match && match.index === 0) {
+          if (pattern.type === 'image') {
+            segments.push({
+              type: 'image',
+              alt: match[1],
+              src: match[2]
+            });
+          } else if (pattern.type === 'link') {
+            segments.push({
+              type: 'link',
+              content: match[0]
+            });
+          } else {
+            segments.push({
+              type: pattern.type,
+              content: match[1]
+            });
+          }
+          remaining = remaining.slice(match[0].length);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        // No pattern matched, take one character as plain text
+        const nextSpecial = remaining.search(/[*!`h]/);
+        if (nextSpecial === -1) {
+          // No more special characters
+          segments.push({ type: 'text', content: remaining });
+          break;
+        } else if (nextSpecial > 0) {
+          // Take text up to the next special character
+          segments.push({ type: 'text', content: remaining.slice(0, nextSpecial) });
+          remaining = remaining.slice(nextSpecial);
+        } else {
+          // nextSpecial is 0, but no pattern matched - take one char
+          segments.push({ type: 'text', content: remaining[0] });
+          remaining = remaining.slice(1);
+        }
+      }
+    }
+
+    return segments;
+  },
+
   // Open link directly
   openLink(e) {
     const url = e.currentTarget.dataset.url;
@@ -744,6 +1093,36 @@ Page({
     });
   },
 
+  // Preview image in note
+  previewImage(e) {
+    const src = e.currentTarget.dataset.src;
+    if (!src) return;
+
+    // Get all images from parsedPreviewContent
+    const images = [];
+    const extractImages = (segments) => {
+      segments.forEach(item => {
+        if (item.type === 'image' && item.src) {
+          images.push(item.src);
+        } else if (item.content && Array.isArray(item.content)) {
+          extractImages(item.content);
+        }
+      });
+    };
+
+    if (this.data.parsedPreviewContent) {
+      extractImages(this.data.parsedPreviewContent);
+    }
+
+    const urls = images.length > 0 ? images : [src];
+    const current = urls.indexOf(src);
+
+    wx.previewImage({
+      urls: urls,
+      current: src
+    });
+  },
+
   closePreviewModal() {
     this.setData({
       showPreviewModal: false,
@@ -756,13 +1135,19 @@ Page({
     this.closePreviewModal();
     
     if (previewType === 'note') {
+      const content = previewData.content || '';
+      // Store content for editor to use when ready
+      this._pendingEditContent = content;
       this.setData({
         showEditModal: true,
         currentEditNote: previewData,
         noteTitle: previewData.title || '',
-        noteContent: previewData.content || '',
+        noteContent: content,
+        parsedNoteContent: this.parseContent(content),
         selectedColor: previewData.color || '#ffffff'
       });
+      // Clear previous editor context and wait for new editor ready
+      this.editEditorCtx = null;
     } else {
       this.setData({
         showTodoEditModal: true,
