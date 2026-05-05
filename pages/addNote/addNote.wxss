@@ -129,6 +129,7 @@
   color: #666;
   line-height: 1.6;
   word-break: break-all;
+  white-space: pre-wrap;
 }
 
 .preview-paragraph {

@@ -852,6 +852,7 @@
   line-height: 1.8;
   word-break: break-all;
   display: block;
+  white-space: pre-wrap;
 }
 
 .preview-meta {
@@ -1023,6 +1024,7 @@
   font-size: 28rpx;
   color: #666;
   line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 /* Markdown Toolbar */

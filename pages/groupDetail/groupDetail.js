@@ -35,7 +35,8 @@ Page({
     previewType: 'note',
     // Join requests
     joinRequests: [],
-    showJoinRequests: false
+    showJoinRequests: false,
+    userInfo: null
   },
 
   // Editor contexts
@@ -44,7 +45,8 @@ Page({
 
   onLoad(options) {
     const groupId = options.id;
-    this.setData({ groupId });
+    const userInfo = wx.getStorageSync('userInfo') || {};
+    this.setData({ groupId, userInfo });
     this.loadGroupInfo(() => {
       // Load join requests after group info is loaded (to check isCreator)
       this.loadJoinRequests();
@@ -966,8 +968,8 @@ Page({
       }
 
       // Check for unordered list items (- or *)
-      const listMatch = line.match(/^\s*[\-\*]\s*(.*)$/);
-      if (listMatch && listMatch[1].trim()) {
+      const listMatch = line.match(/^\s*[\-\*]\s+(.+)$/);
+      if (listMatch) {
         flushParagraph();
         segments.push({
           type: 'list-item',
@@ -978,8 +980,8 @@ Page({
       }
 
       // Check for ordered list items (1. 2. etc)
-      const orderedListMatch = line.match(/^\s*(\d+)\.\s*(.*)$/);
-      if (orderedListMatch && orderedListMatch[2].trim()) {
+      const orderedListMatch = line.match(/^\s*(\d+)\.\s+(.+)$/);
+      if (orderedListMatch) {
         flushParagraph();
         segments.push({
           type: 'list-item',

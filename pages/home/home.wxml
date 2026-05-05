@@ -142,11 +142,11 @@
   <view class="modal-content">
     <view class="modal-header">设置分享密码</view>
     <view class="modal-body">
-      <input type="text" placeholder="请输入4-6位分享密码" value="{{sharePassword}}" bindinput="onSharePasswordInput" maxlength="6" />
+      <input type="text" placeholder="请输入4-6位分享密码" value="{{sharePassword}}" bindinput="onSharePasswordInput" bindblur="onSharePasswordInput" maxlength="6" />
     </view>
     <view class="modal-footer">
-      <button class="btn-cancel" bindtap="closeShareModal">取消</button>
-      <button class="btn-confirm" bindtap="confirmShare">确定</button>
+      <button class="btn-cancel" type="button" bindtap="closeShareModal">取消</button>
+      <button class="btn-confirm" type="button" bindtap="confirmShare">确定</button>
     </view>
   </view>
 </view>

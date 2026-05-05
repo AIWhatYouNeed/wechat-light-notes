@@ -167,6 +167,13 @@ wx.cloud.init({
 
 ## 更新日志
 
+### v1.2.1
+- 共享组 Markdown 修复：修复 `**加粗**`、`*斜体*` 在文本开头时被误判为列表项的问题
+- 共享组待办修复：修复添加待办时 `Cannot read property 'nickName' of undefined` 报错
+- 编辑器工具栏修复：修复个人小记点击加粗/斜体按钮时 `getSelectionRange is not a function` 报错
+- 预览空格修复：修复 Markdown 语法后输入的空格在预览中不显示的问题
+- 分享密码修复：修复分享密码输入框偶尔取值失败导致"请输入分享密码"提示
+
 ### v1.2.0
 - Markdown 编辑器：共享小记支持 Markdown 语法编辑
 - 图片上传：支持在共享小记中上传和插入图片

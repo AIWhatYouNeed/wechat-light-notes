@@ -575,6 +575,7 @@
   color: #333;
   line-height: 1.8;
   word-break: break-all;
+  white-space: pre-wrap;
 }
 
 .preview-paragraph {

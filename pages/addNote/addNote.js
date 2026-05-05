@@ -143,25 +143,25 @@ Page({
   // Insert Markdown syntax at cursor position using editor API
   insertMarkdownAtCursor(text, selectionLength = 0) {
     if (!this.editorCtx) return;
-    
+
     this.editorCtx.insertText({
-      text: text
-    });
-    
-    // If selectionLength > 0, move cursor back to select placeholder
-    if (selectionLength > 0) {
-      // Get current selection and adjust
-      this.editorCtx.getSelectionRange({
-        success: res => {
-          const currentEnd = res.end;
-          const newStart = currentEnd - selectionLength;
-          this.editorCtx.setSelectionRange({
-            start: newStart,
-            end: currentEnd
+      text: text,
+      success: () => {
+        // If selectionLength > 0, move cursor back to select placeholder
+        if (selectionLength > 0 && this.editorCtx.getSelectionRange && this.editorCtx.setSelectionRange) {
+          this.editorCtx.getSelectionRange({
+            success: res => {
+              const currentEnd = res.end;
+              const newStart = currentEnd - selectionLength;
+              this.editorCtx.setSelectionRange({
+                start: newStart,
+                end: currentEnd
+              });
+            }
           });
         }
-      });
-    }
+      }
+    });
   },
 
   // Bold
