@@ -6,7 +6,7 @@ App({
   onLaunch: function () {
     if (wx.cloud) {
       wx.cloud.init({
-        env: 'cloud1-7gwqps20ba3b8837',
+        env: 'YOUR_CLOUD_ENV_ID_HERE',
         traceUser: true
       });
       console.log('Cloud initialized');
